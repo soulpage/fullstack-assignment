@@ -1,0 +1,111 @@
+.sidebarContainer {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    height: 100%;
+    background: var(--primary-bg-dark-ligher);
+    border-left: 0.5rem solid var(--primary-bg-dark);
+    transition: width 0.2s ease-in-out;
+}
+
+.sidebarContainer h1 {
+    padding: 1rem;
+}
+
+.sidebarContainer a h1:hover {
+    color: var(--primary-yellow);
+    background-color: var(--secondary-bg-dark);
+}
+
+.sidebarContainer ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebarContainer li {
+    font-size: 1rem;
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.sidebarContainer li:hover {
+    color: var(--primary-yellow);
+    background-color: var(--secondary-bg-dark);
+}
+
+.sidebarContainer nav {
+    position: relative;
+    width: 100%;
+}
+
+.collapseButtonContainer {
+    background: var(--primary-bg-dark);
+    display: flex;
+    flex-direction: column;
+    padding-top: 1rem;
+}
+
+.collapseButtonContainer span {
+    transform: rotate(180deg);
+    writing-mode: vertical-rl;
+    padding-bottom: 1rem;
+    padding-top: 1rem;
+    color: var(--primary-txt-light);
+}
+
+.collapseButton {
+    fill: var(--button-bg-enabled);
+    border: none;
+    background: transparent;;
+    cursor: pointer;
+    width: 2rem;
+    height: 4rem;
+    padding: 0.25rem;
+}
+
+.collapseButton:hover {
+    fill: var(--primary-yellow);
+    transition: fill 0.15s ease-in-out;
+}
+
+.collapseButton:hover span {
+    color: var(--primary-yellow);
+    transition: color 0.15s ease-in-out;
+}
+
+.mirrored svg {
+    transform: rotate(180deg);
+}
+
+.hidden {
+    display: none;
+    /*width: 0;*/
+    transition: width 0.2s ease-in-out;
+}
+
+.collapsed {
+    border: none;
+    width: 2rem;
+}
+
+.logoutContainer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    border-top: 0.1rem solid var(--button-bg-enabled);
+    background-color: var(--primary-bg-dark);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.logoutContainer:hover {
+    background-color: var(--secondary-bg-dark);
+    border-top: 0.1rem solid var(--primary-yellow);
+    color: var(--primary-yellow);
+}
