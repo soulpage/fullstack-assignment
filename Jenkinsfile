@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -18,8 +17,6 @@ pipeline {
                 script {
                     // Checkout the repository
                     checkout scm
-                    // or use the following if you need to specify the repository URL and branch
-                    // git url: 'https://your-git-repo-url.git', branch: 'main'
                 }
             }
         }
@@ -101,4 +98,11 @@ pipeline {
     }
 
     post {
-      
+        always {
+            script {
+                // Clean up any dangling images and containers
+                sh 'docker image prune -f'
+            }
+        }
+    }
+}
