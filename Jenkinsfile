@@ -76,4 +76,35 @@ pipeline {
             }
         }
 
-        stage('Push Backend I
+        stage('Push Backend Image to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
+                        docker.image(BACKEND_IMAGE).push("latest")
+                    }
+                }
+            }
+        }
+
+        stage('Push Frontend Image to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
+                        docker.image(FRONTEND_IMAGE).push("latest")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            node {
+                script {
+                    // Clean up any dangling images and containers
+                    sh 'docker image prune -f'
+                }
+            }
+        }
+    }
+}
