@@ -96,15 +96,4 @@ pipeline {
             }
         }
     }
-
-    post {
-        always {
-            node {
-                script {
-                    // Clean up any dangling images and containers
-                    sh 'docker image prune -f'
-                }
-            }
-        }
-    }
 }
