@@ -5,7 +5,7 @@ pipeline {
         BACKEND_IMAGE = "saikrishna38721/backend"
         FRONTEND_IMAGE = "saikrishna38721/frontend"
         DOCKER_CREDENTIALS_ID = "dockerhub"  // Jenkins credential ID for Docker Hub
-        SONAR_SCANNER_HOME = tool 'sonarqub'  // Name of SonarQube Scanner tool as configured in Jenkins
+        SONAR_SCANNER_HOME = tool 'sonarqube'  // Name of SonarQube Scanner tool as configured in Jenkins
         SONAR_PROJECT_KEY = "demo"
         SONAR_HOST_URL = "http://34.174.208.0:9000"
         SONAR_AUTH_TOKEN = credentials('sonarqube')  // Jenkins credential ID for SonarQube token
@@ -76,33 +76,4 @@ pipeline {
             }
         }
 
-        stage('Push Backend Image to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
-                        docker.image(BACKEND_IMAGE).push("latest")
-                    }
-                }
-            }
-        }
-
-        stage('Push Frontend Image to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
-                        docker.image(FRONTEND_IMAGE).push("latest")
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            script {
-                // Clean up any dangling images and containers
-                sh 'docker image prune -f'
-            }
-        }
-    }
-}
+        stage('Push Backend I
