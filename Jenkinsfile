@@ -46,7 +46,7 @@ pipeline {
             steps {
                 script {
                     // Run SonarQube analysis on backend
-                    withSonarQubeEnv('SonarQube') {  // 'SonarQube' is the name of the SonarQube server configuration in Jenkins
+                    withSonarQubeEnv('sonarqube') {  // 'SonarQube' is the name of the SonarQube server configuration in Jenkins
                         sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner " +
                            "-Dsonar.projectKey=${SONAR_PROJECT_KEY} " +
                            "-Dsonar.sources=./backend " +
