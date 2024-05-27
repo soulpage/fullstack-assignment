@@ -1,5 +1,3 @@
-#!/bin/sh
-
 # Script to wait for SQLite to be ready
 
 set -e
