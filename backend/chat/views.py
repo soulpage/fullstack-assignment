@@ -7,6 +7,68 @@ from rest_framework.response import Response
 from chat.models import Conversation, Message, Version
 from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
 from chat.utils.branching import make_branched_conversation
+from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
+from .models import ConversationSummary
+from .serializers import ConversationSummarySerializer
+import hashlib
+from rest_framework.views import APIView
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from .models import UploadedFile
+from .serializers import UploadedFileSerializer
+from .models import UploadedFile
+class FileListView(generics.ListAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        filter_param = self.request.query_params.get('filter', None)
+        if filter_param:
+            # Apply filtering logic here
+            pass
+        return queryset
+
+class FileUploadView(APIView):
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file_content = file.read()
+        file_hash = hashlib.md5(file_content).hexdigest()
+        
+        if UploadedFile.objects.filter(file_hash=file_hash).exists():
+            return Response({'error': 'File already exists'}, status=status.HTTP_409_CONFLICT)
+        
+        uploaded_file = UploadedFile(
+            filename=file.name,
+            file_hash=file_hash,
+            content=file_content
+        )
+        uploaded_file.save()
+        
+        serializer = UploadedFileSerializer(uploaded_file)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'per_page'
+    max_page_size = 100
+
+class ConversationSummaryList(generics.ListAPIView):
+    queryset = ConversationSummary.objects.all()
+    serializer_class = ConversationSummarySerializer
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        filter_param = self.request.query_params.get('filter', None)
+        if filter_param:
+            # Apply filtering logic here
+            pass
+        return queryset
 
 
 @api_view(["GET"])

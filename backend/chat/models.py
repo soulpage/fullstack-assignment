@@ -12,7 +12,7 @@ class Role(models.Model):
         return self.name
 
 
-class Conversation(models.Model):
+class Conversationsummary(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -22,6 +22,17 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    summary = models.TextField(blank=True, null=True)  # New field
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            self.summary = generate_summary(self.content)
+        super().save(*args, **kwargs)
+
+    def _str_(self):
+        return self.content[:50]
 
     def __str__(self):
         return self.title

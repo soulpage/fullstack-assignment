@@ -5,6 +5,9 @@ from operator import itemgetter
 from typing import Optional
 
 from chat.serializers import VersionTimeIdSerializer
+from transformers import pipeline
+summarizer = pipeline("summarization")
+
 
 __all__ = ["make_branched_conversation"]
 
@@ -284,7 +287,14 @@ def _get_version_chain_matches(candidates: list[OrderedDict], chains: list[list[
     -------
     list[dict]
         A list of matched version chains.
+
     """
+    
+
+def generate_summary(text):
+    summary = summarizer(text, max_length=50, min_length=25, do_sample=False)
+    return summary[0]['summary_text']
+
     matched_data = []
     for item in candidates:
         item_versions = item["versions"]

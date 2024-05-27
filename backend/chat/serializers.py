@@ -5,6 +5,17 @@ from rest_framework import serializers
 from chat.models import Conversation, Message, Role, Version
 
 
+class ConversationSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConversationSummary
+        fields = ['id', 'content', 'created_at']
+
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = ['id', 'filename', 'file_hash']
+
 def should_serialize(validated_data, field_name) -> bool:
     if validated_data.get(field_name) is not None:
         return True
