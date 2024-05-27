@@ -26,7 +26,6 @@ pipeline {
                 script {
                     dir('backend') {
                         sh 'pip install -r dependencies.txt'
-                        sh 'python manage.py collectstatic --noinput'
                     }
                 }
             }
