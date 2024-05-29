@@ -9,7 +9,6 @@ function Login({ isSubmitting, setIsSubmitting }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  console.log(email);
   const dispatch = useDispatch();
   const router = useRouter();
 
