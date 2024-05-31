@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./frontend:/app/frontend
+      - node_modules:/app/frontend/node_modules
+    networks:
+      custom_network:
+        aliases:
+          - fullstack_assignment_react.local
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./backend:/app/backend
+      - ./static:/app/backend/static
+      - ./backend/db.sqlite3:/app/backend/db.sqlite3
+    networks:
+      custom_network:
+        aliases:
+          - fullstack_assignment_django.local
+
+networks:
+  custom_network:
+    driver: bridge
+
+volumes:
+  node_modules:
+    driver: local
