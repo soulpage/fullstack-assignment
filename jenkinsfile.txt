@@ -5,16 +5,16 @@ pipeline {
         stage('Setup') {
             steps {
 
-                sh 'cd frontend && npm install && npm test'
-                sh 'cd backend  && pip install -r dependencies.txt'
+                sh 'npm install && npm test'
+                sh 'pip install -r dependencies.txt'
                 sh 'python manage.py collectstatic --noinput'
             }
         }
         stage('Build') {
             steps {
 
-                sh 'docker build -t your-backend-image backend/'
-                sh 'docker build -t your-frontend-image frontend/'
+                sh 'cd fullstack-assignment/backend && docker build -t your-backend-image backend/'
+                sh 'cd fullstack-assignment/frontend && docker build -t your-frontend-image frontend/'
             }
         }
         stage('Deploy') {
