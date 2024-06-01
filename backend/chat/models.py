@@ -1,16 +1,12 @@
 import uuid
-
 from django.db import models
-
 from authentication.models import CustomUser
-
 
 class Role(models.Model):
     name = models.CharField(max_length=20, blank=False, null=False, default="user")
 
     def __str__(self):
         return self.name
-
 
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -22,6 +18,8 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    is_archived = models.BooleanField(default=False)
+    summary = models.TextField(blank=True, null=True)  
 
     def __str__(self):
         return self.title
@@ -31,6 +29,15 @@ class Conversation(models.Model):
 
     version_count.short_description = "Number of versions"
 
+    def generate_summary(self):
+        
+        messages = Message.objects.filter(version__conversation=self).order_by('created_at')
+        summary = ' '.join([message.content for message in messages])
+        return summary[:500]  
+
+    def save(self, *args, **kwargs):
+        self.summary = self.generate_summary()
+        super().save(*args, **kwargs)
 
 class Version(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -46,7 +53,6 @@ class Version(models.Model):
         else:
             return f"Version of `{self.conversation.title}` with no root message yet"
 
-
 class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     content = models.TextField(blank=False, null=False)
@@ -58,8 +64,8 @@ class Message(models.Model):
         ordering = ["created_at"]
 
     def save(self, *args, **kwargs):
-        self.version.conversation.save()
         super().save(*args, **kwargs)
+        self.version.conversation.save() 
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
