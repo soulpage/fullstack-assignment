@@ -22,7 +22,7 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-
+    summary = models.TextField(null=True, blank=True)
     def __str__(self):
         return self.title
 
@@ -30,6 +30,16 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+    
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            self.generate_summary()
+        super().save(*args, **kwargs)
+
+    def generate_summary(self):
+        messages = self.versions.order_by('created_at').values_list('messages__content', flat=True)
+        full_text = " ".join(messages)
+        self.summary = full_text[:200]
 
 
 class Version(models.Model):
