@@ -1,9 +1,9 @@
+# chat/models.py
+
 import uuid
-
 from django.db import models
-
-from authentication.models import CustomUser
-
+from django.utils.text import Truncator
+from authentication.models import CustomUser  # Assuming you have a CustomUser model
 
 class Role(models.Model):
     name = models.CharField(max_length=20, blank=False, null=False, default="user")
@@ -22,6 +22,7 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    summary = models.TextField(blank=True)  # New field for conversation summary
 
     def __str__(self):
         return self.title
@@ -30,6 +31,18 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+
+    def update_summary(self):
+        messages = self.messages.all()
+        if messages:
+            summary = Truncator("\n".join([message.content for message in messages])).chars(200)
+            self.summary = summary
+        else:
+            self.summary = "No messages"
+
+    def save(self, *args, **kwargs):
+        self.update_summary()
+        super().save(*args, **kwargs)
 
 
 class Version(models.Model):
@@ -42,9 +55,9 @@ class Version(models.Model):
 
     def __str__(self):
         if self.root_message:
-            return f"Version of `{self.conversation.title}` created at `{self.root_message.created_at}`"
+            return f"Version of '{self.conversation.title}' created at '{self.root_message.created_at}'"
         else:
-            return f"Version of `{self.conversation.title}` with no root message yet"
+            return f"Version of '{self.conversation.title}' with no root message yet"
 
 
 class Message(models.Model):
@@ -58,8 +71,26 @@ class Message(models.Model):
         ordering = ["created_at"]
 
     def save(self, *args, **kwargs):
-        self.version.conversation.save()
+        self.version.conversation.save()  # Update conversation modified_at when saving message
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Uploaded File ({self.file.name})"
+
+
+class RAGData(models.Model):
+    query = models.TextField()
+    context = models.TextField()
+    response = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"RAG Data ({self.id})"
