@@ -1,23 +1,21 @@
+# chat/serializers.py
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
-
-from chat.models import Conversation, Message, Role, Version
-
+from chat.models import Conversation, Message, Role, Version, UploadedFile
+from .models import RAGData  # Importing RAGData model
 
 def should_serialize(validated_data, field_name) -> bool:
-    if validated_data.get(field_name) is not None:
-        return True
+    return validated_data.get(field_name) is not None
 
-
-class TitleSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=100, required=True)
-
+class TitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Conversation
+        fields = ['title']
 
 class VersionTimeIdSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     created_at = serializers.DateTimeField()
-
 
 class MessageSerializer(serializers.ModelSerializer):
     role = serializers.SlugRelatedField(slug_field="name", queryset=Role.objects.all())
@@ -33,14 +31,12 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "version"]
 
     def create(self, validated_data):
-        message = Message.objects.create(**validated_data)
-        return message
+        return Message.objects.create(**validated_data)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation["versions"] = []  # add versions field
         return representation
-
 
 class VersionSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True)
@@ -76,7 +72,6 @@ class VersionSerializer(serializers.ModelSerializer):
         version = Version.objects.create(**validated_data)
         for message_data in messages_data:
             Message.objects.create(version=version, **message_data)
-
         return version
 
     def update(self, instance, validated_data):
@@ -107,7 +102,6 @@ class VersionSerializer(serializers.ModelSerializer):
 
         return instance
 
-
 class ConversationSerializer(serializers.ModelSerializer):
     versions = VersionSerializer(many=True)
 
@@ -128,7 +122,6 @@ class ConversationSerializer(serializers.ModelSerializer):
             version_serializer = VersionSerializer(data=version_data)
             if version_serializer.is_valid():
                 version_serializer.save(conversation=conversation)
-
         return conversation
 
     def update(self, instance, validated_data):
@@ -148,5 +141,14 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer = VersionSerializer(data=version_data)
             if version_serializer.is_valid():
                 version_serializer.save(conversation=instance)
-
         return instance
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = '__all__'
+
+class RAGDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RAGData
+        fields = '__all__'

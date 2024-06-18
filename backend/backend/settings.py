@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    'django_crontab',  # Added for Django Crontab
+    'myapp',
 ]
 
 MIDDLEWARE = [
@@ -80,20 +82,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
-
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'chatdatabase',       # Database name you created
+        'USER': 'saadh',              # PostgreSQL username
+        'PASSWORD': '9849040664Ms@',  # PostgreSQL password
+        'HOST': '127.0.0.1',          # Assuming PostgreSQL is running locally
+        'PORT': '5432',               # Default PostgreSQL port
     }
 }
 
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -117,8 +118,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Europe/Warsaw"
@@ -127,25 +126,63 @@ USE_TZ = True
 USE_I18N = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_ROOT = BASE_DIR / "static"
 STATIC_URL = "/static/"
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_URL,
-]
-
+# CSRF settings
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+# Load .env file for environment variables
+load_dotenv()
+
+# CRONJOBS setting for Django Crontab
+CRONJOBS = [
+    ('0 0 * * *', 'django.core.management.call_command', ['cleanup_old_conversations']),
+]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'file_operations.log'),  # Adjust path as needed
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'myapp': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# Caching settings
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'conversation_summary_cache_table',
+    }
+}
+
+# Specify the app for tests
+TESTS = 'chat'
+

@@ -1,26 +1,38 @@
+from django.views.decorators.cache import cache_page
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import status, viewsets, generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.models import Conversation, Message, Version, UploadedFile, RAGData
+from chat.serializers import (
+    ConversationSerializer,
+    MessageSerializer,
+    TitleSerializer,
+    VersionSerializer,
+    UploadedFileSerializer,
+    RAGDataSerializer
+)
 from chat.utils.branching import make_branched_conversation
 
+class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
+    pagination_class = PageNumberPagination
 
 @api_view(["GET"])
 def chat_root_view(request):
     return Response({"message": "Chat works!"}, status=status.HTTP_200_OK)
 
-
 @login_required
 @api_view(["GET"])
+@cache_page(60 * 15)  # Cache for 15 minutes
 def get_conversations(request):
     conversations = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
     serializer = ConversationSerializer(conversations, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @login_required
 @api_view(["GET"])
@@ -33,7 +45,6 @@ def get_conversations_branched(request):
         make_branched_conversation(conversation_data)
 
     return Response(conversations_data, status=status.HTTP_200_OK)
-
 
 @login_required
 @api_view(["GET"])
@@ -48,7 +59,6 @@ def get_conversation_branched(request, pk):
     make_branched_conversation(conversation_data)
 
     return Response(conversation_data, status=status.HTTP_200_OK)
-
 
 @login_required
 @api_view(["POST"])
@@ -76,7 +86,6 @@ def add_conversation(request):
     except Exception as e:
         return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 @login_required
 @api_view(["GET", "PUT", "DELETE"])
 def conversation_manage(request, pk):
@@ -100,7 +109,6 @@ def conversation_manage(request, pk):
         conversation.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 @login_required
 @api_view(["PUT"])
 def conversation_change_title(request, pk):
@@ -118,7 +126,6 @@ def conversation_change_title(request, pk):
 
     return Response({"detail": "Title not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-
 @login_required
 @api_view(["PUT"])
 def conversation_soft_delete(request, pk):
@@ -130,7 +137,6 @@ def conversation_soft_delete(request, pk):
     conversation.deleted_at = timezone.now()
     conversation.save()
     return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 @login_required
 @api_view(["POST"])
@@ -147,16 +153,11 @@ def conversation_add_message(request, pk):
     serializer = MessageSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(version=version)
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(
-            {
-                "message": serializer.data,
-                "conversation_id": conversation.id,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return Response({
+            "message": serializer.data,
+            "conversation_id": conversation.id,
+        }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @login_required
 @api_view(["POST"])
@@ -171,28 +172,27 @@ def conversation_add_version(request, pk):
     except Message.DoesNotExist:
         return Response({"detail": "Root message not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Check if root message belongs to the same conversation
     if root_message.version.conversation != conversation:
         return Response({"detail": "Root message not part of the conversation"}, status=status.HTTP_400_BAD_REQUEST)
 
     new_version = Version.objects.create(
-        conversation=conversation, parent_version=root_message.version, root_message=root_message
+        conversation=conversation,
+        parent_version=root_message.version,
+        root_message=root_message
     )
 
-    # Copy messages before root_message to new_version
     messages_before_root = Message.objects.filter(version=version, created_at__lt=root_message.created_at)
     new_messages = [
-        Message(content=message.content, role=message.role, version=new_version) for message in messages_before_root
+        Message(content=message.content, role=message.role, version=new_version)
+        for message in messages_before_root
     ]
     Message.objects.bulk_create(new_messages)
 
-    # Set the new version as the current version
     conversation.active_version = new_version
     conversation.save()
 
     serializer = VersionSerializer(new_version)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 @login_required
 @api_view(["PUT"])
@@ -210,7 +210,6 @@ def conversation_switch_version(request, pk, version_id):
 
     return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 @login_required
 @api_view(["POST"])
 def version_add_message(request, pk):
@@ -222,11 +221,44 @@ def version_add_message(request, pk):
     serializer = MessageSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(version=version)
-        return Response(
-            {
-                "message": serializer.data,
-                "version_id": version.id,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return Response({
+            "message": serializer.data,
+            "version_id": version.id,
+        }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@login_required
+@api_view(['POST'])
+def upload_file(request):
+    file = request.FILES.get('file')
+    if UploadedFile.objects.filter(file=file.name).exists():
+        return Response({'error': 'File already exists'}, status=400)
+    uploaded_file = UploadedFile.objects.create(file=file)
+    serializer = UploadedFileSerializer(uploaded_file)
+    return Response(serializer.data)
+
+@login_required
+@api_view(['GET'])
+def list_uploaded_files(request):
+    files = UploadedFile.objects.all()
+    serializer = UploadedFileSerializer(files, many=True)
+    return Response(serializer.data)
+
+@login_required
+@api_view(['DELETE'])
+def delete_uploaded_file(request, pk):
+    try:
+        uploaded_file = UploadedFile.objects.get(pk=pk)
+    except UploadedFile.DoesNotExist:
+        return Response({'error': 'File not found'}, status=404)
+    uploaded_file.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Adding RAGData views
+class RAGDataListView(generics.ListCreateAPIView):
+    queryset = RAGData.objects.all()
+    serializer_class = RAGDataSerializer
+
+class RAGDataDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = RAGData.objects.all()
+    serializer_class = RAGDataSerializer

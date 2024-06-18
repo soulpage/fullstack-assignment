@@ -1,33 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
-from nested_admin.nested import NestedModelAdmin, NestedStackedInline, NestedTabularInline
-
-from chat.models import Conversation, Message, Role, Version
-
-
-class RoleAdmin(NestedModelAdmin):
-    list_display = ["id", "name"]
-
-
-class MessageAdmin(NestedModelAdmin):
-    list_display = ["display_desc", "role", "id", "created_at", "version"]
-
-    def display_desc(self, obj):
-        return obj.content[:20] + "..."
-
-    display_desc.short_description = "content"
-
-
-class MessageInline(NestedTabularInline):
-    model = Message
-    extra = 2  # number of extra forms to display
-
-
-class VersionInline(NestedStackedInline):
-    model = Version
-    extra = 1
-    inlines = [MessageInline]
-
+from django.template.defaultfilters import truncatechars
+from .models import Conversation
 
 class DeletedListFilter(admin.SimpleListFilter):
     title = "Deleted"
@@ -47,13 +21,14 @@ class DeletedListFilter(admin.SimpleListFilter):
             return queryset.filter(deleted_at__isnull=True)
         return queryset
 
-
-class ConversationAdmin(NestedModelAdmin):
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
     actions = ["undelete_selected", "soft_delete_selected"]
-    inlines = [VersionInline]
-    list_display = ("title", "id", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user")
-    list_filter = (DeletedListFilter,)
-    ordering = ("-modified_at",)
+    list_display = (
+        "title", "id", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user", "summary"
+    )
+    list_filter = (DeletedListFilter, "deleted_at")
+    search_fields = ("title",)
 
     def undelete_selected(self, request, queryset):
         queryset.update(deleted_at=None)
@@ -65,14 +40,10 @@ class ConversationAdmin(NestedModelAdmin):
 
     soft_delete_selected.short_description = "Soft delete selected conversations"
 
-    def get_action_choices(self, request, **kwargs):
-        choices = super().get_action_choices(request)
-        for idx, choice in enumerate(choices):
-            fn_name = choice[0]
-            if fn_name == "delete_selected":
-                new_choice = (fn_name, "Hard delete selected conversations")
-                choices[idx] = new_choice
-        return choices
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.prefetch_related("messages")  # Prefetch related messages for efficiency
+        return queryset
 
     def is_deleted(self, obj):
         return obj.deleted_at is not None
@@ -80,13 +51,11 @@ class ConversationAdmin(NestedModelAdmin):
     is_deleted.boolean = True
     is_deleted.short_description = "Deleted?"
 
+    def summary(self, obj):
+        if obj.messages.exists():
+            messages_preview = "\n".join([message.content for message in obj.messages.all()])
+            return truncatechars(messages_preview, 100)
+        else:
+            return "No messages"
 
-class VersionAdmin(NestedModelAdmin):
-    inlines = [MessageInline]
-    list_display = ("id", "conversation", "parent_version", "root_message")
-
-
-admin.site.register(Role, RoleAdmin)
-admin.site.register(Message, MessageAdmin)
-admin.site.register(Conversation, ConversationAdmin)
-admin.site.register(Version, VersionAdmin)
+    summary.short_description = "Summary"
