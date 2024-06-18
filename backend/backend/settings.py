@@ -22,7 +22,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 FRONTEND_URL = os.environ["FRONTEND_URL"]
@@ -47,6 +46,10 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    "env",
+    'django_crontab',
+    'django_windows_tools',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -84,10 +87,21 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "myprojectdb",
+        "USER": "postgres",
+        "PASSWORD": "123456",
+        "HOST": "127.0.0.1",
+        "PORT": "5432",
     }
 }
 
@@ -137,15 +151,23 @@ STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
-    FRONTEND_URL,
+    FRONTEND_URL,  # Ensure FRONTEND_URL is defined above
+    'https://your.frontend.url',  # Replace with your actual frontend URL
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF settings
 CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_URL,
+    FRONTEND_URL,  # Ensure FRONTEND_URL is defined above
 ]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+# Cronjobs configuration
+CRONJOBS = [
+    ('0 0 * * *', 'django.core.management.call_command', ['cleanup_conversations']),
+]

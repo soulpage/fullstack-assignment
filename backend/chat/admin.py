@@ -55,6 +55,8 @@ class ConversationAdmin(NestedModelAdmin):
     list_filter = (DeletedListFilter,)
     ordering = ("-modified_at",)
 
+    list_display = ('title', 'summary')
+
     def undelete_selected(self, request, queryset):
         queryset.update(deleted_at=None)
 
@@ -90,3 +92,4 @@ admin.site.register(Role, RoleAdmin)
 admin.site.register(Message, MessageAdmin)
 admin.site.register(Conversation, ConversationAdmin)
 admin.site.register(Version, VersionAdmin)
+
