@@ -95,3 +95,36 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+
+# In models.py
+import hashlib
+
+class File(models.Model):
+    name = models.CharField(max_length=255)
+    path = models.CharField(max_length=255)
+    hash = models.CharField(max_length=32, unique=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Calculate and set the file hash on save
+        if not self.hash:
+            self.hash = self.calculate_file_hash()
+        super().save(*args, **kwargs)
+
+    def calculate_file_hash(self):
+        # Calculate MD5 hash of the file content
+        file_hash = hashlib.md5()
+        with open(self.path, "rb") as f:
+            # Read file in chunks to handle large files
+            for chunk in iter(lambda: f.read(4096), b""):
+                file_hash.update(chunk)
+        return file_hash.hexdigest()
+
+    def delete(self, *args, **kwargs):
+        # Optionally delete the physical file on deletion of model instance
+        # Example: os.remove(self.path)
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
