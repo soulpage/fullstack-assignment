@@ -3,10 +3,78 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.models import Conversation, Message, Version, File
+from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer, ConversationSummarySerializer
 from chat.utils.branching import make_branched_conversation
+from chat.serializers import FileSerializer
+from django.shortcuts import get_object_or_404
+
+import hashlib
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+
+
+@api_view(["GET"])
+def get_conversation_summaries(request):
+    conversations = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
+
+    # Pagination
+    paginator = Paginator(conversations, 10)  # 10 items per page
+    page = request.GET.get("page")
+
+    try:
+        conversations_page = paginator.page(page)
+    except PageNotAnInteger:
+        conversations_page = paginator.page(1)
+    except EmptyPage:
+        conversations_page = paginator.page(paginator.num_pages)
+
+    # Serialize the queryset
+    serializer = ConversationSummarySerializer(conversations_page, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# In views.py
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from chat.models import File
+from chat.serializers import FileSerializer
+from django.shortcuts import get_object_or_404
+
+@api_view(["POST"])
+def upload_file(request):
+    file = request.FILES.get("file")
+    
+    # Check if file already exists
+    file_hash = hashlib.md5(file.read()).hexdigest()
+    if File.objects.filter(hash=file_hash).exists():
+        return Response({"detail": "File already exists"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Save the file
+    file.seek(0)  # Reset file pointer
+    file_path = default_storage.save(file.name, ContentFile(file.read()))
+    
+    # Save file metadata to your model
+    file_instance = File.objects.create(name=file.name, path=file_path, hash=file_hash)
+    
+    return Response({"detail": "File uploaded successfully", "file": FileSerializer(file_instance).data}, status=status.HTTP_201_CREATED)
+
+@api_view(["GET"])
+def list_files(request):
+    files = File.objects.all()
+    serializer = FileSerializer(files, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(["DELETE"])
+def delete_file(request, pk):
+    file = get_object_or_404(File, pk=pk)
+    file.delete()
+    return Response({"detail": "File deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["GET"])

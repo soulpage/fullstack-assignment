@@ -31,3 +31,6 @@ server/dist
 
 # prompts
 prompts/debug
+
+#base 
+.env
