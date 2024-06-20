@@ -19,4 +19,10 @@ urlpatterns = [
     ),
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
+    path('summaries/', views.get_conversation_summaries, name='conversation-summaries'),
+    path('upload/', views.File_Upload_View, name='file-upload'),
+    path('files/', views.UploadedFileListView, name='file-list'),
+    path('files/<int:pk>/delete/', views.delete_uploaded_file, name='file-delete'),
+    path('rag/', views.getRagView, name='rag-page'),
+    path('file-processing/', views.getFileProcessingView, name='file-processing-page'),
 ]

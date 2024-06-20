@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from authentication.models import CustomUser
-from chat.models import Conversation, Message, Role, Version
+from chat.models import Conversation, Message, Role, UploadedFile, Version
 
 
 class LoggedInConversationTests(APITestCase):
@@ -649,3 +649,26 @@ class LoggedInConversationTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='testuser', password='testpass', roles='admin')
+        self.client.login(username='testuser', password='testpass')
+
+    def test_conversation_summary_list(self):
+        url = reverse('conversation-summaries')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_file_upload(self):
+        url = reverse('file-upload')
+        with open('testfile.txt', 'wb') as f:
+            f.write(b'Test file content')
+        with open('testfile.txt', 'rb') as f:
+            response = self.client.post(url, {'file': f})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_file_delete(self):
+        uploaded_file = UploadedFile.objects.create(file='testfile.txt', checksum='dummychecksum')
+        url = reverse('file-delete', args=[uploaded_file.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

@@ -1,12 +1,21 @@
+from functools import cache
+from venv import logger
+from warnings import filters
+from aiohttp import request
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from chat.models import Conversation, Message, UploadedFile, Version
+from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, UploadedFileSerializer, VersionSerializer, ConversationSummarySerializer
 from chat.utils.branching import make_branched_conversation
+from django.shortcuts import get_object_or_404
+
+import hashlib
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 
 @api_view(["GET"])
@@ -230,3 +239,66 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+def get_conversation_summaries(request):
+    conversations = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
+    # Pagination
+    paginator = Paginator(conversations, 10)  # 10 items per page
+    page = request.GET.get("page")
+
+
+    try:
+     conversations_page = paginator.page(page)
+    except PageNotAnInteger:
+        conversations_page = paginator.page(1)
+    except EmptyPage:
+        conversations_page = paginator.page(paginator.num_pages)
+
+    # Serialize the queryset
+    serializer = ConversationSummarySerializer(conversations_page, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# File Upload View
+@api_view(["POST"])
+def File_Upload_View(request):
+    serializer_class = UploadedFileSerializer
+
+    def post(self, request, *args, **kwargs):
+        logger.info(f"File uploaded by {request.user.username}")
+        file = request.FILES['file']
+        checksum = hashlib.md5(file.read()).hexdigest()
+        file.seek(0)
+
+        if UploadedFile.objects.filter(checksum=checksum).exists():
+            return Response({'detail': 'File already uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        upload = UploadedFile(file=file, checksum=checksum)
+        upload.save()
+        return Response({'detail': 'File uploaded successfully'}, status=status.HTTP_201_CREATED)
+
+# List Uploaded Files with Metadata
+@api_view(["GET"])
+def UploadedFileListView(request):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+
+# Delete Uploaded File
+@login_required
+@api_view(["DELETE"])
+def delete_uploaded_file(request, pk):
+    try:
+        uploaded_file = UploadedFile.objects.get(pk=pk)
+        logger.info(f"File with id {pk} deleted by {request.user.username}")
+        uploaded_file.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except UploadedFile.DoesNotExist:
+        return Response({'detail': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+@api_view(["GET"])
+def getRagView(self, request):
+        return Response({"message": "RAG works!"}, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+def getFileProcessingView(self, request):
+        return Response({"message": "File processing works!"}, status=status.HTTP_200_OK)

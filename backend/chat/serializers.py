@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from chat.models import Conversation, Message, Role, Version
+from chat.models import Conversation, Message, Role, UploadedFile, Version
 
 
 def should_serialize(validated_data, field_name) -> bool:
@@ -150,3 +150,13 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer.save(conversation=instance)
 
         return instance
+    
+class ConversationSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Conversation
+        fields = ['id', 'title', 'summary', 'created_at', 'modified_at']
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = ['id', 'file', 'uploaded_at', 'checksum']

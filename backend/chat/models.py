@@ -1,3 +1,4 @@
+from typing import AbstractSet
 import uuid
 
 from django.db import models
@@ -22,6 +23,8 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    summary = models.TextField(blank=True, null=True)  
+
 
     def __str__(self):
         return self.title
@@ -30,6 +33,15 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+
+    def generate_summary(self):
+        self.summary = "This is a generated summary."
+        self.save()
+
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            self.generate_summary()
+        super().save(*args, **kwargs)
 
 
 class Version(models.Model):
@@ -63,3 +75,15 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    checksum = models.CharField(max_length=64, unique=True)
+
+    def __str__(self):
+        return self.file.name
+    
+class CustomUser(AbstractSet):
+    roles = models.CharField(max_length=100)

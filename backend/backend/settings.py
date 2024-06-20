@@ -47,6 +47,12 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    "your_app",
+    "django_crontab",
+]
+
+CRONJOBS = [
+    ('0 0 * * *', 'django.core.management.call_command', ['clean_old_conversations', '30']),
 ]
 
 MIDDLEWARE = [
@@ -85,11 +91,16 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'chatbot_db',
+        'USER': 'postgres',
+        'PASSWORD': 'rahul',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -149,3 +160,28 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
