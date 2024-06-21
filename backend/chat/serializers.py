@@ -116,6 +116,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         fields = [
             "id",  # DB
             "title",  # required
+            "summary",
             "active_version",
             "versions",  # optional
             "modified_at",  # DB, read-only

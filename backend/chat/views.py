@@ -54,7 +54,7 @@ def get_conversation_branched(request, pk):
 @api_view(["POST"])
 def add_conversation(request):
     try:
-        conversation_data = {"title": request.data.get("title", "Mock title"), "user": request.user}
+        conversation_data = {"title": request.data.get("title", "Mock title", "summery"), "user": request.user}
         conversation = Conversation.objects.create(**conversation_data)
         version = Version.objects.create(conversation=conversation)
 
