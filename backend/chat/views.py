@@ -3,10 +3,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.models import Conversation, Message, Version, FileUpload
+from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer, FileUploadSerializer
 from chat.utils.branching import make_branched_conversation
+from rest_framework.pagination import PageNumberPagination
 
 
 @api_view(["GET"])
@@ -230,3 +230,71 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+@login_required
+@api_view(['GET'])
+def get_summary(request):
+    user = request.user
+    conversations = Conversation.objects.filter(user=user,deleted_at=True).order_by('-modified_at')
+
+    participant = request.query_params.get('participant')
+    if participant:
+        conversations = conversations.filter(user=participant)
+
+    start_date = request.query_params.get('start_date')
+    if start_date:
+        conversations = conversations.filter(created_at=start_date)
+
+    end_date = request.query_params.get('end_date')
+    if end_date:
+        conversations = conversations.filter(created_at=end_date)
+
+    paginator = CustomPagination()
+    paginated_conversations = paginator.paginate_queryset(conversations,request)
+    serializer = ConversationSerializer(paginated_conversations,many=True)
+
+    return paginator.get_paginated_response(serializer.data)
+
+
+@login_required
+@api_view(['POST'])
+def upload_file(request):
+    user = request.user
+    file = request.FILES['file']
+    checksum = FileUpload(user=user, file=file).generate_checksum()
+
+    # Check for duplicate file
+    if FileUpload.objects.filter(checksum=checksum).exists():
+        return Response({'detail': 'Duplicate file upload detected.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    file_upload = FileUpload(user=user, file=file, checksum=checksum)
+    file_upload.save()
+
+    return Response(FileUploadSerializer(file_upload).data, status=status.HTTP_201_CREATED)
+
+@login_required
+@api_view(['GET'])
+def list_uploaded_files(request):
+    user = request.user
+    files = FileUpload.objects.filter(user=user)
+    serializer = FileUploadSerializer(files, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@login_required
+@api_view(['DELETE'])
+def delete_file(request, file_id):
+    try:
+        file_upload = FileUpload.objects.get(id=file_id, user=request.user)
+    except FileUpload.DoesNotExist:
+        return Response({'detail': 'File not found or not owned by user.'}, status=status.HTTP_404_NOT_FOUND)
+
+    file_upload.file.delete()  # Delete the file from storage
+    file_upload.delete()       # Delete the file metadata from the database
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.libs import openai
+from typing import List, Dict
 
 GPT_40_PARAMS = dict(
     temperature=0.7,
@@ -60,7 +61,7 @@ def get_gpt_title(prompt: str, response: str):
     return result
 
 
-def get_conversation_answer(conversation: list[dict[str, str]], model: str, stream: bool = True):
+def get_conversation_answer(conversation: List[Dict[str, str]], model: str, stream: bool = True):
     kwargs = {**GPT_40_PARAMS, **dict(stream=stream)}
     engine = GPT_VERSIONS[model].engine
 

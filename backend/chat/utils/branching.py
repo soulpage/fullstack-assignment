@@ -2,7 +2,7 @@ from bisect import insort
 from collections import OrderedDict
 from itertools import zip_longest
 from operator import itemgetter
-from typing import Optional
+from typing import Optional,Tuple,List
 
 from chat.serializers import VersionTimeIdSerializer
 
@@ -85,7 +85,7 @@ def _get_conversation_version(conversation_data: OrderedDict, version_id: str) -
     return None
 
 
-def _get_branching_messages(curr_version: OrderedDict, parent_version: OrderedDict) -> tuple[OrderedDict, OrderedDict]:
+def _get_branching_messages(curr_version: OrderedDict, parent_version: OrderedDict) -> Tuple[OrderedDict, OrderedDict]:
     """
     Fetches the branching messages between a current version and its parent version.
 
@@ -212,7 +212,7 @@ def _make_branched_conversation_chains(conversation_data: OrderedDict) -> None:
                         break
 
 
-def _get_version_time_id_chain(list_of_versions: list[list[OrderedDict]]) -> list[list[dict]]:
+def _get_version_time_id_chain(list_of_versions: List[List[OrderedDict]]) -> List[List[dict]]:
     """
     Returns a list of chains of versions.
 
@@ -269,7 +269,7 @@ def _get_version_time_id_chain(list_of_versions: list[list[OrderedDict]]) -> lis
     return chains
 
 
-def _get_version_chain_matches(candidates: list[OrderedDict], chains: list[list[dict]]) -> list[dict]:
+def _get_version_chain_matches(candidates: List[OrderedDict], chains: List[List[dict]]) -> List[dict]:
     """
     Returns a list of matched version chains.
 
