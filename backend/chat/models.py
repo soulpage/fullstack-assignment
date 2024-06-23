@@ -22,6 +22,7 @@ class Conversation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    summary = models.TextField(blank=True, null=True) 
 
     def __str__(self):
         return self.title
@@ -30,6 +31,15 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+
+    def save(self, *args, **kwargs):
+        if not self.summary:  # Only generate summary if it's not already provided
+            self.summary = self.generate_summary()
+        super().save(*args, **kwargs)
+
+    def generate_summary(self):
+        # Example summarization logic (simple truncation in this case)
+        return self.title[:100]  # Simple example: use the first 100 characters of the title
 
 
 class Version(models.Model):
@@ -63,3 +73,12 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.file.name  # Return the file name or another identifier

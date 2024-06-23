@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from django.utils import timezone
 
 from dotenv import load_dotenv
 
@@ -27,6 +28,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 FRONTEND_URL = os.environ["FRONTEND_URL"]
 
+
+#CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -41,12 +47,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_crontab",
     "corsheaders",
     "rest_framework",
     "nested_admin",
     "authentication",
     "chat",
     "gpt",
+    
 ]
 
 MIDDLEWARE = [
@@ -84,12 +92,19 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# settings.py
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'soulpage_db',
+        'USER': 'postgres',
+        'PASSWORD': 'Poonam6201@',
+        'HOST': 'localhost',  # or the IP address of your PostgreSQL server
+        'PORT': '5432',
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -149,3 +164,34 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+
+
+CRONJOBS = [
+    ('* * * * *', 'python manage.py cleanup_old_conversations', '>> ' + os.path.join(BASE_DIR,'log/debug7.log' + ' 2>&1 '))
+]
+
+
+
+# backend/settings.py
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'cleanup_old_conversations_task': {
+        'task': 'chat.tasks.cleanup_old_conversations_task',
+        'schedule': crontab(minute=0, hour=0),  # Run daily at midnight
+    },
+}
+
+# backend/settings.py
+import os
+
+# Media settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Static files settings (if not already configured)
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# Add this to the end of settings.py

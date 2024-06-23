@@ -1,6 +1,9 @@
 from django.urls import path
 
 from chat import views
+from django.conf.urls.static import static
+
+from django.conf import settings
 
 urlpatterns = [
     path("", views.chat_root_view, name="chat_root_view"),
@@ -19,4 +22,8 @@ urlpatterns = [
     ),
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
-]
+    path('conversation-summaries/', views.ConversationSummaryAPIView.as_view(), name='conversation-summaries'),
+    path('upload/', views.FileUploadAPIView.as_view(), name='file-upload'),
+    path('uploaded-files/', views.UploadedFileListAPIView.as_view(), name='uploaded-files'),
+    path('uploaded-files/<int:pk>/', views.UploadedFileDeleteAPIView.as_view(), name='uploaded-file-delete'),
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

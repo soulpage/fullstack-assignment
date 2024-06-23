@@ -3,9 +3,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from rest_framework import generics
+from rest_framework.parsers import MultiPartParser, FormParser
+from chat.models import Conversation, Message, Version,UploadedFile
+from chat.serializers import ConversationSerializer, MessageSerializer, FileUploadSerializer,TitleSerializer, VersionSerializer,ConversationSummarySerializer
 from chat.utils.branching import make_branched_conversation
 
 
@@ -230,3 +231,35 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ConversationSummaryAPIView(generics.ListAPIView):
+    serializer_class = ConversationSummarySerializer
+    queryset = Conversation.objects.all()
+    paginate_by = 10  # Adjust as needed
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+
+class FileUploadAPIView(generics.CreateAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = FileUploadSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save()
+    
+
+class UploadedFileListAPIView(generics.ListAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = FileUploadSerializer
+
+class UploadedFileDeleteAPIView(generics.DestroyAPIView):
+    queryset = UploadedFile.objects.all()
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
