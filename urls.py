@@ -1,5 +1,5 @@
 """
-URL configuration for soulPageAssignment project.
+URL configuration for assignment2 project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
@@ -14,13 +14,18 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# soulPageAssignment/urls.py
-
-from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from myapp.views import ConversationViewSet
+from myapp.views import FileUploadView, FileListView, FileDeleteView
+
+
+router = DefaultRouter()
+router.register(r'conversations', ConversationViewSet)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('admin/conversations/', include('conversations.urls')),  # Adjust according to your app's URLs
-    # Other URL patterns for your project
+    path('api/', include(router.urls)),
+    path('api/upload/', FileUploadView.as_view(), name='file-upload'),
+    path('api/files/', FileListView.as_view(), name='file-list'),
+    path('api/files/<int:file_id>/', FileDeleteView.as_view(), name='file-delete'),
 ]
