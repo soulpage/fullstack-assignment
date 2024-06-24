@@ -1,43 +1,65 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+import uuid
+
 from django.db import models
 
-
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password, **extra_fields):
-        if not email:
-            raise ValueError("The Email field must be set")
-        if not password:
-            raise ValueError("The Password field must be set")
-
-        local, domain = email.split("@")
-        if "+" in local:
-            local = local.split("+")[0]
-        email = f"{local}@{domain.lower()}"
-
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-
-        return user
-
-    def create_superuser(self, email, password, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_active", True)
-        extra_fields.setdefault("is_superuser", True)
-
-        return self.create_user(email, password, **extra_fields)
+from authentication.models import CustomUser
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True)
-    is_active = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+class Role(models.Model):
+    name = models.CharField(max_length=20, blank=False, null=False, default="user")
 
     def __str__(self):
-        return self.email
+        return self.name
+
+
+class Conversation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    active_version = models.ForeignKey(
+        "Version", null=True, blank=True, on_delete=models.CASCADE, related_name="current_version_conversations"
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.title
+
+    def version_count(self):
+        return self.versions.count()
+
+    version_count.short_description = "Number of versions"
+
+
+class Version(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey("Conversation", related_name="versions", on_delete=models.CASCADE)
+    parent_version = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
+    root_message = models.ForeignKey(
+        "Message", null=True, blank=True, on_delete=models.SET_NULL, related_name="root_message_versions"
+    )
+
+    def __str__(self):
+        if self.root_message:
+            return f"Version of `{self.conversation.title}` created at `{self.root_message.created_at}`"
+        else:
+            return f"Version of `{self.conversation.title}` with no root message yet"
+
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    content = models.TextField(blank=False, null=False)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    version = models.ForeignKey("Version", related_name="messages", on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def save(self, *args, **kwargs):
+        self.version.conversation.save()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.role}: {self.content[:20]}..."
