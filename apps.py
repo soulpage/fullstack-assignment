@@ -1,9 +1,6 @@
 from django.apps import AppConfig
 
 
-class ConversationsConfig(AppConfig):
+class MyappConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'conversations'
-
-    def ready(self):
-        import conversations.signals
+    name = 'myapp'
