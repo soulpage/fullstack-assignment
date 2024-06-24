@@ -47,6 +47,11 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    'django_crontab',
+]
+
+CRONJOBS = [
+    ('0 3 * * *', 'chat.management.commands.cleanup.Command'),  # Runs daily at 3AM
 ]
 
 MIDDLEWARE = [
