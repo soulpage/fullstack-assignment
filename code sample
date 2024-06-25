@@ -1,0 +1,695 @@
+Download Prometheus:
+wget https://github.com/prometheus/prometheus/releases/download/v2.35.0/prometheus-2.35.0.linux-amd64.tar.gz
+tar -xzf prometheus-2.35.0.linux-amd64.tar.gz
+cd prometheus-2.35.0.linux-amd64
+Configure Prometheus:
+
+
+nano prometheus.yml
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']  # Replace with your Node Exporter IP
+Create a workflow file under .github/workflows/ci-cd.yml:
+
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  # Adjust branch name as per your default branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step to build and deploy Next.js application
+      - name: Build and Deploy Next.js
+        working-directory: nextjs_app/
+        run: |
+          npm install
+          npm run build
+          # Optionally, build Docker image and push to a registry
+          # docker build -t my-nextjs-app .
+          # docker push my-nextjs-app
+
+      # Step to build and deploy Django application
+      - name: Build and Deploy Django
+        working-directory: django_app/
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py migrate
+          # Optionally, collect static files
+          # python manage.py collectstatic --noinput
+          # Start Django application (using Gunicorn or other WSGI server)
+
+To configure a CI/CD pipeline that automatically tests, builds, and deploys both the Next.js and Django applications on every push to the repository using GitHub Actions, you can follow the structured workflow below. This example assumes you have separate directories for your Next.js and Django applications within your repository.
+
+GitHub Actions Workflow Configuration
+Create or update the workflow file .github/workflows/ci-cd.yml in your repository:
+
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to the main branch
+  pull_request:
+    branches:
+      - main  # Trigger on pull requests to the main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      ### Next.js Application ###
+      - name: Test and Build Next.js
+        if: success()
+        working-directory: nextjs_app/  # Path to your Next.js application directory
+        run: |
+          npm install
+          npm run build
+
+      ### Django Application ###
+      - name: Test and Build Django
+        if: success()
+        working-directory: django_app/  # Path to your Django application directory
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py test  # Example command to run tests
+          python manage.py migrate
+          # Additional commands for Django deployment (e.g., collectstatic, start server)
+
+      ### Deployment ###
+      - name: Deploy Next.js and Django
+        if: success()
+        run: |
+          echo "Deployment steps can go here..."
+          # Example commands:
+          # - Use SSH or API to deploy to your server
+          # - Restart services if necessary
+          # - Handle environment-specific configurations
+
+      ### Notification (Optional) ###
+      - name: Notify deployment status
+        if: always()
+        uses: carlos-jenkins/git-push-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+Create a backup script (backup_database.sh) on your server where PostgreSQL is installed:
+
+
+#!/bin/bash
+
+# PostgreSQL database credentials
+PGUSER="your_postgres_user"
+PGPASSWORD="your_postgres_password"
+PGHOST="localhost"
+PGPORT="5432"
+
+# Backup directory and filename
+BACKUP_DIR="/path/to/backup/directory"
+DATE=$(date +%Y-%m-%d_%H-%M-%S)
+BACKUP_FILE="$BACKUP_DIR/db_backup_$DATE.sql"
+
+# Perform backup using pg_dump
+pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -Fc -f $BACKUP_FILE
+
+# Optional: Compress backup file
+gzip $BACKUP_FILE
+crontab -e
+0 0 * * * /path/to/backup_database.sh >> /path/to/backup.log 2>&1
+
+Implementing a strategy for regular database backups is crucial for maintaining data integrity and ensuring recoverability in case of data loss or corruption. Below, I'll outline steps to set up regular database backups for a PostgreSQL database, along with a script to restore the database from a backup if needed.
+
+Strategy for Regular Database Backups (PostgreSQL)
+1. Configure Backup Script
+Create a backup script (backup_database.sh) on your server where PostgreSQL is installed:
+
+
+#!/bin/bash
+
+# PostgreSQL database credentials
+PGUSER="your_postgres_user"
+PGPASSWORD="your_postgres_password"
+PGHOST="localhost"
+PGPORT="5432"
+
+# Backup directory and filename
+BACKUP_DIR="/path/to/backup/directory"
+DATE=$(date +%Y-%m-%d_%H-%M-%S)
+BACKUP_FILE="$BACKUP_DIR/db_backup_$DATE.sql"
+
+# Perform backup using pg_dump
+pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -Fc -f $BACKUP_FILE
+
+# Optional: Compress backup file
+gzip $BACKUP_FILE
+Explanation:
+Replace your_postgres_user and your_postgres_password with your actual PostgreSQL database credentials.
+Adjust PGHOST and PGPORT if your database is hosted on a different server or port.
+pg_dump is used to dump the database to a file ($BACKUP_FILE) in custom format (-Fc).
+The backup file is optionally compressed using gzip after the backup operation.
+2. Schedule Regular Backups
+Use cron to schedule the backup script to run at regular intervals (e.g., daily):
+
+
+crontab -e
+Add the following line to run the backup script daily at midnight (adjust timing as needed):
+
+
+0 0 * * * /path/to/backup_database.sh >> /path/to/backup.log 2>&1
+Explanation:
+This cron entry executes /path/to/backup_database.sh daily at midnight (0 0 * * *).
+Redirects both standard output and error output to /path/to/backup.log for logging purposes.
+3. Restore Database from Backup
+To restore the database from a backup (db_backup_yyyy-mm-dd_HH-MM-SS.sql.gz):
+
+
+#!/bin/bash
+
+# PostgreSQL database credentials
+PGUSER="your_postgres_user"
+PGPASSWORD="your_postgres_password"
+PGHOST="localhost"
+PGPORT="5432"
+
+# Backup file to restore
+BACKUP_FILE="/path/to/backup/directory/db_backup_yyyy-mm-dd_HH-MM-SS.sql.gz"
+
+# Drop existing database (optional)
+# psql -h $PGHOST -p $PGPORT -U $PGUSER -c "DROP DATABASE your_database_name;"
+
+# Create empty database (if not already exists)
+# psql -h $PGHOST -p $PGPORT -U $PGUSER -c "CREATE DATABASE your_database_name;"
+
+# Restore from backup
+gunzip -c $BACKUP_FILE | pg_restore -h $PGHOST -p $PGPORT -U $PGUSER -d your_database_name -Fc -
+1. Terraform Configuration (main.tf)
+Create a main.tf file with the following configuration:
+
+
+# Configure AWS provider
+provider "aws" {
+  region = "us-east-1"  # Replace with your preferred AWS region
+}
+
+# Define variables
+variable "instance_type" {
+  default = "t2.micro"
+}
+
+variable "ami" {
+  default = "ami-0c55b159cbfafe1f0"  # Replace with your preferred AMI ID
+}
+
+# Create a new EC2 instance
+resource "aws_instance" "web" {
+  ami           = var.ami
+  instance_type = var.instance_type
+  tags = {
+    Name = "web-server"
+  }
+}
+
+# Open port 80 (HTTP) and 22 (SSH) for the instance
+resource "aws_security_group" "instance_sg" {
+  name        = "instance_sg"
+  description = "Security group for instance"
+  
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+2. Provisioning Infrastructure with Terraform
+Initialize Terraform and apply the configuration:
+
+
+terraform init
+terraform apply
+Setup Script for Next.js Application
+Create a shell script (setup_nextjs.sh) to install Node.js, npm dependencies, configure environment variables, and build the Next.js application.
+
+
+#!/bin/bash
+
+# Install Node.js (adjust version as needed)
+curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Navigate to Next.js application directory
+cd /path/to/your/nextjs/app
+
+# Install npm dependencies
+npm install
+
+# Create .env file and configure environment variables
+cat << EOF > .env
+NEXT_PUBLIC_API_URL=http://api.example.com  # Example environment variable
+# Add other environment variables as needed
+EOF
+
+# Build Next.js application (optional if you want to pre-build)
+npm run build
+
+echo "Next.js setup complete."
+Setup Script for Django Application
+Create another shell script (setup_django.sh) to set up Python, virtual environment, install Django dependencies, configure database settings, apply migrations, and optionally collect static files.
+
+
+#!/bin/bash
+
+# Install Python 3 and pip
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip
+
+# Navigate to Django application directory
+cd /path/to/your/django/app
+
+# Set up virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install Django and other dependencies
+pip install -r requirements.txt
+
+# Apply Django migrations
+python manage.py migrate
+
+# Optionally, collect static files
+# python manage.py collectstatic --noinput
+
+echo "Django setup complete."
+Execution
+Make Scripts Executable:
+
+
+chmod +x setup_nextjs.sh setup_django.sh
+Run Scripts:
+
+Execute setup_nextjs.sh to set up the Next.js environment:
+
+
+./setup_nextjs.sh
+Execute setup_django.sh to set up the Django environment:
+
+
+./setup_django.sh
+Dockerfile for Next.js Application
+Create a file named Dockerfile in the root directory of your Next.js application:
+
+
+# Use the official Node.js image as a base
+FROM node:14-alpine
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Build the Next.js application
+RUN npm run build
+
+# Expose the port Next.js app runs on (3000 by default)
+EXPOSE 3000
+
+# Command to run the Next.js application
+CMD ["npm", "start"]
+Dockerfile for Django Application
+Create a file named Dockerfile in the root directory of your Django application:
+
+
+# Use the official Python image as a base
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port Django app runs on (8000 by default)
+EXPOSE 8000
+
+# Command to run the Django application using Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_project.wsgi:application"]
+
+
+Creating Dockerfiles for both Next.js and Django applications allows for containerizing these applications, making them portable and easier to manage across different environments. Below are Dockerfile examples for both Next.js and Django applications.
+
+Dockerfile for Next.js Application
+Create a file named Dockerfile in the root directory of your Next.js application:
+
+
+# Use the official Node.js image as a base
+FROM node:14-alpine
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Build the Next.js application
+RUN npm run build
+
+# Expose the port Next.js app runs on (3000 by default)
+EXPOSE 3000
+
+# Command to run the Next.js application
+CMD ["npm", "start"]
+Dockerfile for Django Application
+Create a file named Dockerfile in the root directory of your Django application:
+
+
+# Use the official Python image as a base
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port Django app runs on (8000 by default)
+EXPOSE 8000
+
+# Command to run the Django application using Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_project.wsgi:application"]
+Explanation:
+Next.js Dockerfile:
+
+Uses node:14-alpine as the base image, which is a lightweight Node.js image based on Alpine Linux.
+Copies package.json and package-lock.json to install dependencies.
+Copies the entire application code and builds the Next.js application using npm run build.
+Exposes port 3000 (default for Next.js).
+Defines npm start as the command to run the Next.js application.
+Django Dockerfile:
+
+Uses python:3.9-slim as the base image, a slim version of Python 3.9 image.
+Sets environment variables to optimize Python for Docker.
+Copies requirements.txt and installs dependencies.
+Copies the entire application code.
+Exposes port 8000 (default for Django).
+Uses Gunicorn (gunicorn) to serve the Django application (django_project.wsgi:application).
+Building and Running Docker Images
+Once you have these Dockerfiles ready:
+
+Build Docker Images:
+
+Navigate to the directory containing Dockerfile.
+Build the Next.js image:
+
+docker build -t nextjs-app .
+Build the Django image:
+
+docker build -t django-app .
+Run Docker Containers:
+
+Run the Next.js container:
+
+docker run -p 3000:3000 nextjs-app
+Replace 3000:3000 with your preferred port mapping if necessary.
+
+Run the Django container:
+
+
+docker run -p 8000:8000 django-app
+Docker Compose Configuration
+Create a docker-compose.yml file in the root directory of your project. This file will define services for both the Next.js and Django applications.
+
+version: '3.8'
+
+services:
+  nextjs:
+    container_name: nextjs-app
+    build:
+      context: ./nextjs_app  # Path to the Next.js application directory
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://django:8000/api  # Use service name as hostname for Django
+    networks:
+      - app-network
+
+  django:
+    container_name: django-app
+    build:
+      context: ./django_app  # Path to the Django application directory
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=django_project.settings.production  # Example Django settings module
+    networks:
+      - app-network
+    depends_on:
+      - db  # Example dependency on a database service
+
+  db:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      - POSTGRES_DB=mydatabase
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+To start the containers:
+docker-compose up --build
+Docker Compose Setup for ELK Stack
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.15.2
+    container_name: logstash
+    volumes:
+      - ./logstash/config:/usr/share/logstash/config
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+    environment:
+      - "ELASTICSEARCH_HOST=http://elasticsearch:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.15.2
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.15.2
+    container_name: filebeat
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - elasticsearch
+      - logstash
+    networks:
+      - app-network
+
+  db:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      - POSTGRES_DB=mydatabase
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  esdata:
+    driver: local
+  postgres-data:
+    driver: local
+Install Elastic APM Node.js Agent:
+npm install elastic-apm-node --save
+Integrate APM with Your Node.js Application:
+const apm = require('elastic-apm-node').start({
+  // Set required APM Server URL and Service Name
+  serverUrl: 'http://localhost:8200',  // Replace with your APM Server URL
+  serviceName: 'my-nodejs-app',        // Replace with your application's name
+  secretToken: '',                     // Optional: APM Server secret token for authentication
+  logLevel: 'debug'                    // Optional: Set log level (trace, debug, info, warn, error)
+});
+
+// Example Express middleware to capture request transactions
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
+
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});
+const apm = require('elastic-apm-node').start();
+
+apm.startTransaction('custom-transaction', 'custom');
+// Your code here
+apm.endTransaction();
+Setting Up Jaeger with Docker Compose
+version: '3.8'
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.29
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+    networks:
+      - app-network
+
+  sample-service:
+    image: your-sample-service-image
+    container_name: sample-service
+    ports:
+      - "3000:3000"
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=14250
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+Integrate Jaeger Client in Microservices:
+
+const { initTracer } = require('jaeger-client');
+const { FORMAT_HTTP_HEADERS } = require('opentracing');
+
+// Initialize Jaeger tracer
+const tracer = initTracer({
+  serviceName: 'your-service-name',
+  sampler: {
+    type: 'const',
+    param: 1,
+  },
+});
+
+// Example function to create a span
+function handleRequest(req, res) {
+  const span = tracer.startSpan('handle-request');
+  span.setTag('http.method', req.method);
+  span.setTag('http.url', req.url);
+
+  // Propagate span context in headers for downstream services
+  tracer.inject(span, FORMAT_HTTP_HEADERS, req.headers);
+
+  // Your application logic here
+
+  span.finish();
+  res.end('Success');
+}
+
+// Start your application server
+const app = require('express')();
+app.get('/', handleRequest);
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});
