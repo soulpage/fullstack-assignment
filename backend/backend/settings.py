@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -154,3 +155,9 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+#Scheduling the cleanup command to run periodically using Django’s crontab
+CRONJOBS = [
+    ('0 0 * * *', 'chat.management.commands.cleanup_conversations.Command')
+    #Adjust the cron schedule ('0 0 * * *' runs daily at midnight; modify as needed).
+]
