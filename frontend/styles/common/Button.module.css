@@ -1,7 +1,0 @@
-.disabled {
-    cursor: none;
-    fill: var(--button-bg-disabled);
-    background-color: var(--button-bg-disabled);
-    border-color: var(--button-bg-disabled-border);
-    box-shadow: none;
-}
