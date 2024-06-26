@@ -47,11 +47,11 @@ class DeletedListFilter(admin.SimpleListFilter):
             return queryset.filter(deleted_at__isnull=True)
         return queryset
 
-
+#Updated the ConversationAdmin to display the new field(summary).
 class ConversationAdmin(NestedModelAdmin):
     actions = ["undelete_selected", "soft_delete_selected"]
     inlines = [VersionInline]
-    list_display = ("title", "id", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user")
+    list_display = ("title", "id", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user","summary")
     list_filter = (DeletedListFilter,)
     ordering = ("-modified_at",)
 
