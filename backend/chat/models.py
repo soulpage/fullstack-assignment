@@ -34,6 +34,13 @@ class Conversation(models.Model):
 
     version_count.short_description = "Number of versions"
 
+    #Implementing the  functionality to automatically generate and store conversation summaries.
+    def generate_summary(self): 
+        summary_length = random.randint(50, 200)
+        summary_text = ''.join(random.choices(string.ascii_letters + string.digits, k=summary_length))
+        self.summary = summary_text
+        self.save()
+
 
 class Version(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
