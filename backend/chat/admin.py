@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from nested_admin.nested import NestedModelAdmin, NestedStackedInline, NestedTabularInline
-
+from .models import Conversation
 from chat.models import Conversation, Message, Role, Version
 
 
@@ -52,8 +52,11 @@ class ConversationAdmin(NestedModelAdmin):
     actions = ["undelete_selected", "soft_delete_selected"]
     inlines = [VersionInline]
     list_display = ("title", "id", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user")
+    list_display = ("title", "id","summary", "created_at", "modified_at", "deleted_at", "version_count", "is_deleted", "user") #modified - new field
     list_filter = (DeletedListFilter,)
     ordering = ("-modified_at",)
+
+    admin.site.register(Conversation, ConversationAdmin)
 
     def undelete_selected(self, request, queryset):
         queryset.update(deleted_at=None)

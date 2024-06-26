@@ -1,8 +1,8 @@
 import uuid
-
 from django.db import models
-
 from authentication.models import CustomUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class Role(models.Model):
@@ -15,6 +15,9 @@ class Role(models.Model):
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
+    
+    summary = models.TextField(blank=True, null=True)  # modified - new field
+
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     active_version = models.ForeignKey(
@@ -23,6 +26,7 @@ class Conversation(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
+
     def __str__(self):
         return self.title
 
@@ -30,6 +34,15 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            self.summary = self.generate_summary(self.field_name)
+        super().save(*args, **kwargs)
+
+    @receiver(post_save, sender=Conversation)
+    def generate_summary(self, content):
+        return content[:50]
 
 
 class Version(models.Model):

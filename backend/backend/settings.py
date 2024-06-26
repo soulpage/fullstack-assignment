@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    "django_crontab", #modification
 ]
 
 MIDDLEWARE = [
@@ -82,13 +83,27 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases     
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+
+        'NAME': os.environ["DB_NAME"],
+
+        'USER': os.environ["DB_USER"],
+
+        'PASSWORD': os.environ["DB_PASSWORD"],
+
     }
+}
+
+
+# Pageneation is added
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 # Password validation
@@ -149,3 +164,9 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+# Scheduling our command to delete old conversations
+CRONJOBS = [
+    ('*/5 * * * *', 'chat.management.commands.cleaning_old_conversations.Command.handle'),
+    # Add more cron jobs as needed
+]

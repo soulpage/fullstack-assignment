@@ -55,6 +55,7 @@ def get_conversation_branched(request, pk):
 def add_conversation(request):
     try:
         conversation_data = {"title": request.data.get("title", "Mock title"), "user": request.user}
+        conversation_data = {"title": request.data.get("title", "Mock title", "summary"), "user": request.user} #updated
         conversation = Conversation.objects.create(**conversation_data)
         version = Version.objects.create(conversation=conversation)
 

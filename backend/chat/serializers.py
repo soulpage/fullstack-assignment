@@ -27,6 +27,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = [
             "id",  # DB
             "content",
+            "summary",  #modified
             "role",  # required
             "created_at",  # DB, read-only
         ]
