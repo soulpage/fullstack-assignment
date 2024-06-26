@@ -18,3 +18,14 @@ urlpatterns = [
     path("auth/", include("authentication.urls")),
     path("", root_view),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ConversationViewSet
+
+router = DefaultRouter()
+router.register(r'conversations', ConversationViewSet)
+
+urlpatterns = [
+    path('', include(router.urls)),
+]

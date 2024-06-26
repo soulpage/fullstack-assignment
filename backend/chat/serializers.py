@@ -150,3 +150,17 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer.save(conversation=instance)
 
         return instance
+
+from rest_framework import serializers
+from .models import Conversation
+
+class ConversationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Conversation
+        fields = ['id', 'title', 'summary', 'created_at']
+from .models import UploadedFile
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = ['id', 'file', 'file_name', 'file_size', 'upload_date']

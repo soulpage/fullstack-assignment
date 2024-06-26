@@ -15,6 +15,7 @@ class Role(models.Model):
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
+    summary = models.TextField(null=True, blank=True)  # new field
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     active_version = models.ForeignKey(
@@ -63,3 +64,16 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+from django.db import models
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    file_name = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField()
+    upload_date = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.file_name = self.file.name
+        self.file_size = self.file.size
+        super().save(*args, **kwargs)

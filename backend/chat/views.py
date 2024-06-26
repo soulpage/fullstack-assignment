@@ -230,3 +230,52 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from django.db import models
+from .utils import generate_summary
+
+class Conversation(models.Model):
+    # existing fields
+    summary = models.TextField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            self.summary = generate_summary(self.get_conversation_text())
+        super().save(*args, **kwargs)
+
+    def get_conversation_text(self):
+        # Assuming you have a related Message model
+        return "\n".join([msg.text for msg in self.messages.all()])
+
+from rest_framework import viewsets, filters
+from .models import Conversation
+from .serializers import ConversationSerializer
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'summary']
+    ordering_fields = ['created_at']
+    ordering = ['created_at']
+
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import UploadedFile
+from .serializers import UploadedFileSerializer
+import hashlib
+
+class UploadedFileViewSet(viewsets.ModelViewSet):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def create(self, request, *args, **kwargs):
+        file = request.data.get('file')
+        # Calculate file hash
+        file_hash = hashlib.md5(file.read()).hexdigest()
+        file.seek(0)
+        if UploadedFile.objects.filter(file_name=file.name, file_size=file.size).exists():
+            return Response({'error': 'File already uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
