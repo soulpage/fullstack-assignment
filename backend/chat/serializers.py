@@ -1,13 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
-
-from chat.models import Conversation, Message, Role, Version
+from chat.models import Conversation, Message, Role, Version, UploadedFile
 
 
 def should_serialize(validated_data, field_name) -> bool:
-    if validated_data.get(field_name) is not None:
-        return True
+    return validated_data.get(field_name) is not None
 
 
 class TitleSerializer(serializers.Serializer):
@@ -76,7 +74,6 @@ class VersionSerializer(serializers.ModelSerializer):
         version = Version.objects.create(**validated_data)
         for message_data in messages_data:
             Message.objects.create(version=version, **message_data)
-
         return version
 
     def update(self, instance, validated_data):
@@ -128,7 +125,6 @@ class ConversationSerializer(serializers.ModelSerializer):
             version_serializer = VersionSerializer(data=version_data)
             if version_serializer.is_valid():
                 version_serializer.save(conversation=conversation)
-
         return conversation
 
     def update(self, instance, validated_data):
@@ -148,5 +144,27 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer = VersionSerializer(data=version_data)
             if version_serializer.is_valid():
                 version_serializer.save(conversation=instance)
+        return instance
 
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = [
+            "id",
+            "file",
+            "filename",
+            "upload_date",
+            "uploaded_by",
+        ]
+        read_only_fields = ["id", "upload_date", "uploaded_by"]
+
+    def create(self, validated_data):
+        uploaded_by = self.context['request'].user
+        return UploadedFile.objects.create(uploaded_by=uploaded_by, **validated_data)
+
+    def update(self, instance, validated_data):
+        instance.file = validated_data.get('file', instance.file)
+        instance.filename = validated_data.get('filename', instance.filename)
+        instance.save()
         return instance

@@ -35,12 +35,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'django_filters',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_crontab",
     "corsheaders",
     "rest_framework",
     "nested_admin",
@@ -59,6 +61,17 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
 ]
+
+##added cronjobs
+CRONJOBS = [
+    ('0 0 * * *', 'django.core.management.call_command', ['cleanup_old_conversations', '30']),
+]
+
+##addee celery and redis
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+
 
 ROOT_URLCONF = "backend.urls"
 
@@ -84,12 +97,19 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# backend/settings.py
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',  # No trailing spaces
+        'USER': 'postgres',  # No trailing spaces
+        'PASSWORD': 'postgres',  # No trailing spaces
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

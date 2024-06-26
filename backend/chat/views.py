@@ -1,12 +1,48 @@
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.models import Conversation, Message, Version, UploadedFile
+from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer, UploadedFileSerializer
 from chat.utils.branching import make_branched_conversation
+
+# chat/views.py
+from django.shortcuts import render
+from django.views.generic import ListView
+from .models import Conversation, UploadedFile
+from django.views import View
+
+class FileUploadView(View):
+    def post(self, request, *args, **kwargs):
+        # handle file upload
+        pass
+class ConversationListView(ListView):
+    model = Conversation
+    template_name = 'chat/conversation_list.html'
+    context_object_name = 'conversations'
+
+class FileUploadView(View):
+    def post(self, request, *args, **kwargs):
+        # handle file upload
+        pass
+
+class UploadedFileListView(ListView):
+    model = UploadedFile
+    template_name = 'chat/uploaded_file_list.html'
+    context_object_name = 'files'
+
+class FileDeleteView(View):
+    def delete(self, request, *args, **kwargs):
+        # handle file deletion
+        pass
+
+# other view functions or classes as necessary
+
 
 
 @api_view(["GET"])
@@ -147,7 +183,6 @@ def conversation_add_message(request, pk):
     serializer = MessageSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(version=version)
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(
             {
                 "message": serializer.data,
@@ -230,3 +265,38 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# File Upload Endpoint with duplication check
+@login_required
+@api_view(["POST"])
+def file_upload_view(request):
+    file_obj = request.FILES['file']
+    filename = file_obj.name
+
+    if UploadedFile.objects.filter(filename=filename).exists():
+        return Response({"detail": "File with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+    uploaded_file = UploadedFile(file=file_obj, filename=filename)
+    uploaded_file.save()
+
+    return Response({"detail": "File uploaded successfully."}, status=status.HTTP_201_CREATED)
+
+
+# List Uploaded Files with Metadata
+class UploadedFileListView(generics.ListAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+
+
+# File Deletion Endpoint
+@login_required
+@api_view(["DELETE"])
+def file_delete_view(request, pk):
+    try:
+        uploaded_file = UploadedFile.objects.get(pk=pk)
+        uploaded_file.file.delete()  # Delete the file from storage
+        uploaded_file.delete()  # Delete the database record
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except UploadedFile.DoesNotExist:
+        return Response({"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND)
