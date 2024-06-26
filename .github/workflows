@@ -1,0 +1,78 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./backend  # Adjust this path to your Django app directory
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/django-app:latest
+
+      - name: Install SSH key and set known_hosts
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          known_hosts: |
+            ${{ secrets.EC2_HOST }}
+            localhost
+            127.0.0.1
+
+      - name: Deploy to EC2
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh $USER@$HOST << EOF
+            # Pull the latest Docker image
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/django-app:latest
+
+            # Stop and remove the existing container (if it exists)
+            docker stop django-app || true
+            docker rm django-app || true
+
+            # Run the new container
+            docker run -d --name django-app \
+              -p 8000:8000 \
+              -e DEBUG=False \
+              -e SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }} \
+              -e ALLOWED_HOSTS=${{ secrets.EC2_HOST }} \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/django-app:latest
+
+            # Run database migrations
+            docker exec django-app python manage.py migrate --noinput
+
+            # Collect static files
+            docker exec django-app python manage.py collectstatic --noinput
+
+            # Restart Nginx (assuming it's installed and configured on the EC2 instance)
+            sudo systemctl restart nginx
+          EOF
+
+      - name: Verify Deployment
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" http://$HOST
