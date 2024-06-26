@@ -4,6 +4,7 @@ from chat import views
 from chat.views import ConversationSummaryListView
 from chat.views import file_upload
 from chat.views import UploadedFileListView
+from chat.views import file_delete
 
 
 urlpatterns = [
@@ -32,4 +33,7 @@ urlpatterns = [
 
      # Define URL pattern for listing uploaded files with metadata
     path('api/files/', UploadedFileListView.as_view(), name='uploaded-files-list'),
+
+    # API endpoint for deleting uploaded files
+    path('api/files/<int:file_id>/', file_delete, name='file-delete'),
 ]

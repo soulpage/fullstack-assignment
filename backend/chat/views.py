@@ -280,3 +280,22 @@ class UploadedFileListView(generics.ListAPIView):
     """
     queryset = UploadedFile.objects.all()
     serializer_class = UploadedFileSerializer
+
+@api_view(['DELETE'])
+def file_delete(request, file_id):
+    """
+    API endpoint to delete an uploaded file.
+
+    Args:
+        file_id (int): ID of the uploaded file to delete.
+
+    Returns:
+        Response: HTTP 204 No Content on successful deletion.
+                  HTTP 404 Not Found if file with specified ID does not exist.
+    """
+    try:
+        file_to_delete = UploadedFile.objects.get(id=file_id)
+        file_to_delete.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except UploadedFile.DoesNotExist:
+        return Response({"detail": "File not found."}, status=status.HTTP_404_NOT_FOUND)
