@@ -161,3 +161,9 @@ CRONJOBS = [
     ('0 0 * * *', 'chat.management.commands.cleanup_conversations.Command')
     #Adjust the cron schedule ('0 0 * * *' runs daily at midnight; modify as needed).
 ]
+
+#Pagination settings
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10  # Adjust page size as needed
+}

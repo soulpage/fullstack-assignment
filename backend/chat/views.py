@@ -3,11 +3,11 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
+from rest_framework import generics, filters
 from chat.models import Conversation, Message, Version
 from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
 from chat.utils.branching import make_branched_conversation
-
+from chat.serializers import ConversationSerializer
 
 @api_view(["GET"])
 def chat_root_view(request):
@@ -230,3 +230,14 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ConversationSummaryListView(generics.ListAPIView):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['created_at']
+    search_fields = ['sender', 'recipient']
+
+    def get_queryset(self):
+        user = self.request.user
+        return Conversation.objects.filter(user=user, deleted_at__isnull=True)
