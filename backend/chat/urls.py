@@ -2,6 +2,8 @@ from django.urls import path
 
 from chat import views
 from chat.views import ConversationSummaryListView
+from chat.views import file_upload
+
 
 urlpatterns = [
     path("", views.chat_root_view, name="chat_root_view"),
@@ -23,4 +25,6 @@ urlpatterns = [
     
     
     path('api/conversations/summary/', ConversationSummaryListView.as_view(), name='conversation-summary-list'),
+
+    path('api/upload/', file_upload, name='file-upload'),
 ]

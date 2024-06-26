@@ -1,13 +1,16 @@
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,parser_classes
 from rest_framework.response import Response
 from rest_framework import generics, filters
 from chat.models import Conversation, Message, Version
 from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
 from chat.utils.branching import make_branched_conversation
 from chat.serializers import ConversationSerializer
+from chat.utils import is_duplicate_file
+from chat.serializers import UploadedFileSerializer
+from rest_framework.parsers import FileUploadParser
 
 @api_view(["GET"])
 def chat_root_view(request):
@@ -241,3 +244,26 @@ class ConversationSummaryListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         return Conversation.objects.filter(user=user, deleted_at__isnull=True)
+    
+@api_view(['POST'])
+@parser_classes([FileUploadParser])
+def file_upload(request):
+    
+    """
+    API endpoint to handle file uploads with duplication check.
+
+    Supports POST requests with multipart/form-data containing a 'file' field.
+    Checks if the uploaded file already exists by filename using is_duplicate_file.
+    
+    """
+    serializer = UploadedFileSerializer(data=request.data)
+
+    if serializer.is_valid():
+        filename = request.data['file'].name
+        if is_duplicate_file(filename):
+            return Response({"detail": "File with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

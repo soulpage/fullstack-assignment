@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
+from chat.models import UploadedFile
+from chat.utils import is_duplicate_file
 
 from chat.models import Conversation, Message, Role, Version
 
@@ -150,3 +152,23 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer.save(conversation=instance)
 
         return instance
+    
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for uploading files with duplication check.
+
+    Validates 'file' field and ensures no duplicate filenames using is_duplicate_file.
+    """
+    class Meta:
+        model = UploadedFile
+        fields = ['file', 'filename']
+
+    def validate(self, data):
+        """
+        Validate method to check if file with the same name already exists.
+        """
+        filename = data['file'].name
+        if is_duplicate_file(filename):
+            raise serializers.ValidationError("File with this name already exists.")
+        return data
