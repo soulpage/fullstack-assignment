@@ -11,6 +11,9 @@ from chat.serializers import ConversationSerializer
 from chat.utils import is_duplicate_file
 from chat.serializers import UploadedFileSerializer
 from rest_framework.parsers import FileUploadParser
+from rest_framework import generics
+from chat.models import UploadedFile
+from chat.serializers import UploadedFileSerializer
 
 @api_view(["GET"])
 def chat_root_view(request):
@@ -267,3 +270,13 @@ def file_upload(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UploadedFileListView(generics.ListAPIView):
+    """
+    API endpoint to list all uploaded files with their metadata.
+
+    Uses ListAPIView to retrieve a list of UploadedFile instances
+    and serialize them using UploadedFileSerializer.
+    """
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer

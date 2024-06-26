@@ -75,6 +75,14 @@ class Message(models.Model):
         return f"{self.role}: {self.content[:20]}..."
     
 class UploadedFile(models.Model):
+    """
+    Model to store uploaded files with metadata.
+
+    Attributes:
+        file (FileField): Stores the uploaded file.
+        filename (CharField): Name of the file.
+        created_at (DateTimeField): Timestamp of when the file was uploaded.
+    """
     file = models.FileField(upload_to='uploads/')
     filename = models.CharField(max_length=255, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)

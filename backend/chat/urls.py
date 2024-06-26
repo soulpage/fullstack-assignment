@@ -3,6 +3,7 @@ from django.urls import path
 from chat import views
 from chat.views import ConversationSummaryListView
 from chat.views import file_upload
+from chat.views import UploadedFileListView
 
 
 urlpatterns = [
@@ -23,8 +24,12 @@ urlpatterns = [
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
     
-    
+     # API endpoint to retrieve conversation summaries
     path('api/conversations/summary/', ConversationSummaryListView.as_view(), name='conversation-summary-list'),
 
+     # API endpoint for file uploads
     path('api/upload/', file_upload, name='file-upload'),
+
+     # Define URL pattern for listing uploaded files with metadata
+    path('api/files/', UploadedFileListView.as_view(), name='uploaded-files-list'),
 ]

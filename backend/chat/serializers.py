@@ -156,13 +156,18 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 class UploadedFileSerializer(serializers.ModelSerializer):
     """
-    Serializer for uploading files with duplication check.
+    Serializer for UploadedFile model to serialize file metadata.
 
-    Validates 'file' field and ensures no duplicate filenames using is_duplicate_file.
+    Fields:
+        id (int): ID of the uploaded file.
+        file (FileField): Uploaded file itself.
+        filename (str): Name of the file.
+        created_at (datetime): Date and time of file upload.
     """
     class Meta:
+
         model = UploadedFile
-        fields = ['file', 'filename']
+        fields = ['id','file', 'filename','created_at']
 
     def validate(self, data):
         """
