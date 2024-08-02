@@ -1,6 +1,7 @@
+import textwrap
 import uuid
 
-from django.db import models
+from django.db import models 
 
 from authentication.models import CustomUser
 
@@ -17,11 +18,35 @@ class Conversation(models.Model):
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
-    active_version = models.ForeignKey(
-        "Version", null=True, blank=True, on_delete=models.CASCADE, related_name="current_version_conversations"
-    )
+    active_version = models.ForeignKey("Version", null=True, blank=True, on_delete=models.CASCADE, related_name="current_version_conversations")
     deleted_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    
+    
+    
+    ##################################
+    # Creating a new field to store the text
+    summary = models.TextField(blank=True, null=True)  
+    
+    def generate_summary(self):
+         # Keeping the maximum length for the summary as 500 characters.
+        max_summary_length = 500  
+        # Aggregate content from related messages
+        content = ' '.join(message.content for message in self.messages.all())
+        if content:
+            # Creating summaries by wrapping text to a specified length
+            self.summary = textwrap.shorten(content, width=max_summary_length, placeholder="...")
+        else:
+            # Default message if content is empty
+            self.summary = "No content available to summarize."
+        # Save the model instance with the generated summary
+        self.save()
+        
+    def save(self, *args, **kwargs):
+        # Only generate summary if it’s empty
+        if not self.summary:
+            self.generate_summary()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -31,6 +56,11 @@ class Conversation(models.Model):
 
     version_count.short_description = "Number of versions"
 
+#
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    file_hash = models.CharField(max_length=32, unique=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class Version(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

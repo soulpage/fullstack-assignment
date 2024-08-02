@@ -1,8 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+from rest_framework.parsers import MultiPartParser
+from .models import UploadedFile
+from .serializers import UploadedFileSerializer
+import hashlib
 
 from chat.models import Conversation, Message, Version
 from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
@@ -230,3 +235,26 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class FileUploadView(generics.CreateAPIView):
+    serializer_class = UploadedFileSerializer
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES['file']
+        file_hash = hashlib.md5(file.read()).hexdigest()
+        file.seek(0)  # Reset file pointer to the beginning
+        if UploadedFile.objects.filter(file_hash=file_hash).exists():
+            return Response({'detail': 'File already uploaded.'}, status=status.HTTP_400_BAD_REQUEST)
+        uploaded_file = UploadedFile(file=file, file_hash=file_hash)
+        uploaded_file.save()
+        return Response(UploadedFileSerializer(uploaded_file).data, status=status.HTTP_201_CREATED)
+
+class UploadedFileList(generics.ListAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+
+class FileDeleteView(generics.DestroyAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer

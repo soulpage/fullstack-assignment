@@ -1,5 +1,5 @@
 from django.urls import path
-
+from .views import FileUploadView, UploadedFileList, FileDeleteView
 from chat import views
 
 urlpatterns = [
@@ -19,4 +19,10 @@ urlpatterns = [
     ),
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
+    
+    
+    #new fields
+    path('upload/', FileUploadView.as_view(), name='file-upload'),
+    path('uploaded_files/', UploadedFileList.as_view(), name='uploaded-files'),
+    path('delete_file/<int:pk>/', FileDeleteView.as_view(), name='delete-file'),
 ]

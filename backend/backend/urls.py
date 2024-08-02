@@ -17,4 +17,5 @@ urlpatterns = [
     path("gpt/", include("gpt.urls")),
     path("auth/", include("authentication.urls")),
     path("", root_view),
+    path("api/", include("backend.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
