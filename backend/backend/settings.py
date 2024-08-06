@@ -26,6 +26,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 FRONTEND_URL = os.environ["FRONTEND_URL"]
+DB_NAME =os.environ["DB_NAME"]
+DB_USER =os.environ["DB_USER"]
+DB_PASSWORD =os.environ["DB_PASSWORD"]
+DB_HOST=os.environ["DB_HOST"]
+DB_PORT=os.environ["DB_PORT"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -47,6 +52,7 @@ INSTALLED_APPS = [
     "authentication",
     "chat",
     "gpt",
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -86,8 +92,12 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     }
 }
 
@@ -149,3 +159,8 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
+
+
+CRONJOBS = [
+    ('0 0 * * *', 'django.core.management.call_command', ['cleanup_old_conversations', '--days=30']),
+]
