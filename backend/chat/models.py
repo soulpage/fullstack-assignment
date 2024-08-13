@@ -1,9 +1,7 @@
 import uuid
-
 from django.db import models
-
+from django.utils import timezone
 from authentication.models import CustomUser
-
 
 class Role(models.Model):
     name = models.CharField(max_length=20, blank=False, null=False, default="user")
@@ -11,9 +9,9 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
-
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    summary = models.TextField(blank=True, null=True) 
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
@@ -31,7 +29,6 @@ class Conversation(models.Model):
 
     version_count.short_description = "Number of versions"
 
-
 class Version(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey("Conversation", related_name="versions", on_delete=models.CASCADE)
@@ -45,7 +42,6 @@ class Version(models.Model):
             return f"Version of `{self.conversation.title}` created at `{self.root_message.created_at}`"
         else:
             return f"Version of `{self.conversation.title}` with no root message yet"
-
 
 class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -63,3 +59,7 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:20]}..."
+
+    def get_conversation_text(self):
+        # Placeholder method for obtaining conversation text
+        return "Sample conversation text"
