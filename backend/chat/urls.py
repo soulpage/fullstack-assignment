@@ -18,5 +18,6 @@ urlpatterns = [
         name="conversation_switch_version",
     ),
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
+    path("conversations/summaries/", views.get_conversation_summaries, name="get_conversation_summaries"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
 ]

@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "gpt",
     "django_celery_results",
     "django_celery_beat",
+    "django_filters",
 ]
 
 MIDDLEWARE = [
