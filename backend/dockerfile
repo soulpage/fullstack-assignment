@@ -1,0 +1,40 @@
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install dependencies
+RUN pip install --upgrade pip
+COPY dependencies.txt /app/
+RUN pip install -r dependencies.txt
+
+# Copy the Django project code into the container
+COPY . /app/
+
+# Generate a SECRET_KEY and set it as an environment variable
+RUN SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())') && \
+    echo "DJANGO_SECRET_KEY=$SECRET_KEY" >> /app/.env
+
+# Automatically retrieve frontend and backend URLs from Docker Compose environment variables
+ARG FRONTEND_URL
+ARG BACKEND_URL
+
+RUN echo "FRONTEND_URL=$FRONTEND_URL" >> /app/.env && \
+    echo "BACKEND_URL=$BACKEND_URL" >> /app/.env
+
+# Run database migrations (optional)
+# RUN python manage.py migrate
+
+# Collect static files (for production)
+RUN python manage.py collectstatic --noinput
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# Start the Django server using Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"]
