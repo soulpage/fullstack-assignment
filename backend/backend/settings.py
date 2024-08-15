@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     "django_filters",
+    "files",
 ]
 
 MIDDLEWARE = [
@@ -172,3 +173,6 @@ CACHES = {
         'LOCATION': 'backend_cache_table',
     }
 }
+
+MEDIA_ROOT = BASE_DIR / "media/"
+MEDIA_URL = ""
