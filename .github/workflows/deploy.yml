@@ -19,18 +19,18 @@ jobs:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Copy Docker Compose file to EC2
-      run: scp -o StrictHostKeyChecking=no -r docker-compose.yml ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/your_project_directory/
+      run: scp -o StrictHostKeyChecking=no -r docker-compose.yml ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/fullstack/
 
     - name: Copy backend files to EC2
-      run: scp -o StrictHostKeyChecking=no -r backend ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/your_project_directory/
+      run: scp -o StrictHostKeyChecking=no -r backend ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/fullstack/
 
     - name: Copy frontend files to EC2
-      run: scp -o StrictHostKeyChecking=no -r frontend ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/your_project_directory/
+      run: scp -o StrictHostKeyChecking=no -r frontend ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/fullstack/
 
     - name: Deploy on EC2
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-          cd ~/your_project_directory
+          cd ~/fullstack
           docker-compose down
           docker-compose up -d --build
         EOF
