@@ -150,3 +150,15 @@ class ConversationSerializer(serializers.ModelSerializer):
                 version_serializer.save(conversation=instance)
 
         return instance
+
+
+class ConversationSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Conversation
+        fields = [
+            'id',
+            'title',
+            'summary',
+            'created_at',
+            'modified_at',
+        ]
