@@ -30,7 +30,7 @@ FRONTEND_URL = os.environ["FRONTEND_URL"]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['51.20.10.52','localhost']
 
 # Application definition
 
@@ -85,9 +85,18 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    #"default": {
+       # "ENGINE": "django.db.backends.sqlite3",
+       # "NAME": BASE_DIR / "db.sqlite3",
+    #}
+
+     'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'backend',
+        'USER': 'backend',
+        'PASSWORD': 'RAJUkala@0206',
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 
@@ -136,6 +145,9 @@ STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
