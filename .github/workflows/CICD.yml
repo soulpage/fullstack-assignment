@@ -1,0 +1,57 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and Push Next.js Docker Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/nextjs-app:latest ./nextjs-app
+        docker push ${{ secrets.DOCKER_USERNAME }}/nextjs-app:latest
+
+    - name: Build and Push Django Docker Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/django-app:latest ./django-app
+        docker push ${{ secrets.DOCKER_USERNAME }}/django-app:latest
+
+    - name: Deploy Next.js Application
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        ssh -i $SSH_PRIVATE_KEY ec2-user@<nextjs-ec2-public-ip> "docker pull ${{ secrets.DOCKER_USERNAME }}/nextjs-app:latest && docker stop nextjs-app || true && docker rm nextjs-app || true && docker run -d -p 3000:3000 --name nextjs-app ${{ secrets.DOCKER_USERNAME }}/nextjs-app:latest"
+
+    - name: Deploy Django Application
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        ssh -i $SSH_PRIVATE_KEY ec2-user@<django-ec2-public-ip> "docker pull ${{ secrets.DOCKER_USERNAME }}/django-app:latest && docker stop django-app || true && docker rm django-app || true && docker run -d -p 8000:8000 --name django-app ${{ secrets.DOCKER_USERNAME }}/django-app:latest"
+
+    - name: Deploy Monitoring Stack
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        ssh -i $SSH_PRIVATE_KEY ec2-user@<monitoring-ec2-public-ip> "docker-compose -f /path/to/docker-compose.yml up -d"

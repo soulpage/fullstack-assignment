@@ -2,6 +2,8 @@ from django.urls import path
 
 from authentication import views
 
+start_http_server(8001)
+
 urlpatterns = [
     path("", views.auth_root_view, name="auth_root"),
     path("csrf_token/", views.csrf_token, name="csrf_token"),

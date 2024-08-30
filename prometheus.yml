@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'nextjs'
+    static_configs:
+      - targets: ['localhost:3000']  # Next.js application
+
+  - job_name: 'django'
+    static_configs:
+      - targets: ['localhost:8000']  # Django application
