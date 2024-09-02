@@ -14,7 +14,8 @@ function LoginPage() {
                 <div className={styles.formContainer}>
                     <div className={styles.formHeader}>
                         <LockKeyIcon/>
-                        <h1>Login</h1>
+                        <h1>Login Nikhil Soul
+                        </h1>
                     </div>
                     <LoginForm isSubmitting={isSubmitting} setIsSubmitting={setIsSubmitting}/>
                     <div className={styles.formFooter}>

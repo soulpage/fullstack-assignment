@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        FRONTEND_URL: "http://127.0.0.1:3000"
+        BACKEND_URL: "http://127.0.0.1:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_ENV=production
+    networks:
+      - app-network
+
+networks:
+  app-network:
