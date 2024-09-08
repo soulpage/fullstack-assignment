@@ -17,4 +17,6 @@ urlpatterns = [
     path("gpt/", include("gpt.urls")),
     path("auth/", include("authentication.urls")),
     path("", root_view),
+    path('nested_admin/', include('nested_admin.urls')), 
+
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

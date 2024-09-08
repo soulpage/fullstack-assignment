@@ -41,3 +41,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+class Conversation(models.Model):
+    content = models.TextField()
+    summary = models.TextField(null=True, blank=True)  # New field
+class FileUpload(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
