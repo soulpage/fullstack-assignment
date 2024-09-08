@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from .models import Conversation
+
 
 from authentication.models import CustomUser
 
@@ -40,3 +42,8 @@ class CustomUserAdmin(UserAdmin):
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
+
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'summary')  # Including the new field
+
+admin.site.register(Conversation, ConversationAdmin)
