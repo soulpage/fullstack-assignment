@@ -5,7 +5,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.serializers import (
+    ConversationSerializer, 
+    MessageSerializer, 
+    TitleSerializer, 
+    VersionSerializer, 
+    ConversationSummarySerializer
+)
+from chat.filters import ConversationSummaryFilter
 from chat.utils.branching import make_branched_conversation
 
 
@@ -230,3 +237,23 @@ def version_add_message(request, pk):
             status=status.HTTP_201_CREATED,
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@login_required
+@api_view(["GET"])
+def get_conversation_summaries(request):
+    # PageNumberPagination; Page size set to 10 items per page.
+    paginator = PageNumberPagination()
+    paginator.page_size = 10
+
+    conversation = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
+    filterset = ConversationSummaryFilter(
+        request.GET,
+        queryset=conversation
+    )
+
+    if not filterset.is_valid():
+        raise translate_validation(filterset.errors)
+
+    queryset = paginator.paginate_queryset(filterset.qs, request)
+    serializer = ConversationSummarySerializer(queryset, many=True)
+    return paginator.get_paginated_response(serializer.data)
