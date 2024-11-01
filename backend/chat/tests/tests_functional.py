@@ -649,3 +649,21 @@ class LoggedInConversationTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_get_conversation_summaries(self):
+        url = reverse("get_conversation_summaries")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(len(data['results']), 1)
+
+        result = data['results'][0]
+
+        # Assert if 'summary' key exists in result
+        self.assertIn('summary', result.keys())
+        # Assert if length of summary is less than equal to 100 
+        self.assertLessEqual(len(result['summary']), 100)
