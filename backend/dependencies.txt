@@ -50,3 +50,4 @@ urllib3==2.0.5
 uvicorn==0.27.1
 virtualenv==20.24.5
 yarl==1.9.2
+gunicorn==23.0.0
