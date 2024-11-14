@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Configuration
-DB_PATH="../backend/db.sqlite3"       # Path to your SQLite database
-BACKUP_DIR="./backups"            # Directory where backups will be stored
-DATE=$(date +%Y-%m-%d_%H-%M-%S)          # Timestamp for the backup filename
+DB_PATH="../backend/db.sqlite3"
+BACKUP_DIR="./backups"
+DATE=$(date +%Y-%m-%d_%H-%M-%S)
 
 # Make the backup directory if it doesn't exist
 sudo mkdir -p $BACKUP_DIR
 
-# Backup the SQLite database by copying it to the backup folder with a timestamp
+# Backup the SQLite DB by copying it to the backup folder with a timestamp
 sudo cp $DB_PATH $BACKUP_DIR/db_backup_$DATE.sqlite3
 
 # Optionally, clean up backups older than 7 days
