@@ -1,0 +1,31 @@
+# Python cache files
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+
+# Django database files
+db.sqlite3
+
+# IDE configurations
+.idea
+.vscode
+
+# Git files
+.git
+.gitignore
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Virtualenv
+venv/
+env/
+.venv
+
+# System files
+.DS_Store
+Thumbs.db
+

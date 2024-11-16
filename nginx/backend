@@ -1,0 +1,11 @@
+# Backend server configuration
+server {
+        listen 90;
+        listen [::]:90;
+
+        server_name _;
+
+        location / {
+                proxy_pass http://127.0.0.1:8000;
+        }
+}

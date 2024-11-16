@@ -1,0 +1,267 @@
+name: ChatGPT Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - ujwal-devops
+      - ujwal-cicd
+    paths:
+      - ".github/workflows/main.yml"
+      - "backend/**"
+      - "frontend/**"
+      - "images/**"
+      - "prompts/**"
+  pull_request:
+    types: [synchronize]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  SonarQube-Analysis:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Setup Environment variables
+        run: echo -e ${{ secrets.SONAR_PROPERTIES }}  > sonar-project.properties
+      - name: Sonar Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  Build-App-Backend:
+    runs-on: ubuntu-22.04
+    needs: [SonarQube-Analysis]
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Setup Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PM2
+        run: npm install -g pm2
+      - name: Setup Env variables
+        run: |
+          echo -e ${{ secrets.BACKEND_ENV }} > .env
+      - name: Install Dependencies
+        run: pwd && pip install -r dependencies.txt
+      - name: Make Migrations
+        run: python manage.py migrate
+      - name: Collect Static Content
+        run: python manage.py collectstatic
+      - name: Start App
+        run: pm2 start "gunicorn backend.wsgi:application -b 0.0.0.0:8000 --reload" --name backend
+
+  Build-App-Frontend:
+    runs-on: ubuntu-22.04
+    needs: [SonarQube-Analysis]
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Setup node Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.20.5
+      - name: Install PM2
+        run: npm install -g pm2
+      - name: Setup Env variables
+        run: |  
+          echo -e ${{ secrets.FRONTEND_ENV }} > .env.local
+      - name: Install Dependencies
+        run: pwd && npm install
+      - name: Static Build
+        run: npm run build
+      - name: Start App
+        run: pm2 start "npm start" --name frontend
+
+  Image-Vuln-Check-Backend:
+    runs-on: ubuntu-24.04
+    needs: [Build-App-Backend]
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker Image
+        run: docker build -t docker.io/${{ vars.DOCKERHUB_USERNAME }}/chatgpt-backend:${{ github.sha }} .
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: "docker.io/${{ vars.DOCKERHUB_USERNAME }}/chatgpt-backend:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          output: trivy-report-backend.txt
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-backend
+          path: trivy-report-backend.txt
+
+  Image-Vuln-Check-Frontend:
+    runs-on: ubuntu-24.04
+    needs: [Build-App-Frontend]
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker Image
+        run: docker build -t docker.io/${{ vars.DOCKERHUB_USERNAME }}/chatgpt-frontend:${{ github.sha }} .
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: "docker.io/${{ vars.DOCKERHUB_USERNAME }}/chatgpt-frontend:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          output: trivy-report-frontend.txt
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-frontend
+          path: trivy-report-frontend.txt
+
+  Push-To-DockerHub-Backend:
+    runs-on: ubuntu-24.04
+    needs: [Image-Vuln-Check-Backend]
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Building Docker Image
+        run: docker build . -t ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-backend:1.${{ github.run_number }}.${{ github.run_attempt}}
+      - name: Pushing Docker Image
+        run: docker push ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-backend:1.${{ github.run_number }}.${{ github.run_attempt}}
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     file: backend/Dockerfile
+      #     push: true
+      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-backend:1.${{ github.run_number }}.${{ github.run_attempt}}
+
+  Push-To-DockerHub-Frontend:
+    runs-on: ubuntu-24.04
+    needs: [Image-Vuln-Check-Frontend]
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Building Docker Image
+        run: docker build . -t ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-frontend:1.${{ github.run_number }}.${{ github.run_attempt}}
+      - name: Pushing Docker Image
+        run: docker push ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-frontend:1.${{ github.run_number }}.${{ github.run_attempt}}
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     file: frontend/Dockerfile
+      #     push: true
+      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/chatgpt-frontend:1.${{ github.run_number }}.${{ github.run_attempt}}
+
+  Update-Helm-Chart-Backend:
+    runs-on: ubuntu-24.04
+    needs: [Push-To-DockerHub-Backend] 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update tag in Helm chart
+        run: |
+          sed -i 's/tag: .*/tag: "1.${{ github.run_number }}.${{ github.run_attempt}}"/' helm/charts/chatgpt-backend/values.yaml
+      - name: Update tag in K8s Deployment
+        run: |
+          sed -i 's|\(uj5ghare/chatgpt-backend:\)[^[:space:]]*|\1"1.${{ github.run_number }}.${{ github.run_attempt}}"|' k8s/manifests/backend/deployment.yml
+      - name: Commit and push changes
+        run: |
+          git pull origin ${{ github.ref_name }}
+          git config --global user.email "${{ secrets.GH_USER_MAIL }}"
+          git config --global user.name "${{ vars.GH_USER_NAME }}"
+          git add .
+          git commit -m "[helm] Updated tag in chatgpt-backend/values.yaml && [k8s] updated backend deployment image tag"
+          git push
+
+  Update-Helm-Chart-Frontend:
+    runs-on: ubuntu-24.04
+    needs: [Push-To-DockerHub-Frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update tag in Helm chart
+        run: |
+          sed -i 's/tag: .*/tag: "1.${{ github.run_number }}.${{ github.run_attempt}}"/' helm/charts/chatgpt-frontend/values.yaml
+      - name: Update tag in K8s Deployment
+        run: |
+          sed -i 's|\(uj5ghare/chatgpt-frontend:\)[^[:space:]]*|\1"1.${{ github.run_number }}.${{ github.run_attempt}}"|' k8s/manifests/frontend/deployment.yml
+      - name: Commit and push changes
+        run: |
+          git pull origin ${{ github.ref_name }}
+          git config --global user.email "${{ secrets.GH_USER_MAIL }}"
+          git config --global user.name "${{ vars.GH_USER_NAME }}"
+          git add .
+          git commit -m "[helm] Updated tag in chatgpt-frontend/values.yaml && [k8s] updated frontend deployment image tag"
+          git push

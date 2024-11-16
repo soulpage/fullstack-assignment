@@ -1,0 +1,29 @@
+# This is a sample deployment manifest file for a simple web application.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.defaultLabel }}-deployment
+  namespace: {{ .Values.defaultNamespace }}
+  labels:
+    app: {{ .Values.defaultLabels }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: {{ .Values.defaultLabels }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.defaultLabels }}
+    spec:
+      containers:
+      - name: {{ .Values.defaultLabels }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+        imagePullPolicy: {{ .Values.image.pullPolicy}}
