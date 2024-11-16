@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: chatgpt-frontend
-        image: uj5ghare/chatgpt-frontend:"1.37.1"
+        image: uj5ghare/chatgpt-frontend:"1.38.1"
         ports:
         - containerPort: 3000
         imagePullPolicy: Always
