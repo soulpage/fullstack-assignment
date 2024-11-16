@@ -1,0 +1,70 @@
+name: Terraform Deployment Workflow
+
+on:
+  push:
+    branches:
+      - ujwal-cicd
+      - ujwal-tf
+    paths:
+      - ".github/workflows/tf.yml"
+      - "tf/files/**"
+  pull_request:
+    types: [synchronize]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+    working-directory: tf/files/
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  Terraform-Deployment:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -var-file=variables.tfvars -out=tfplan
+        continue-on-error: true
+
+      - name: Terraform Apply
+        if: "contains(github.event.head_commit.message, 'Apply')"
+        id: apply
+        run: terraform apply -var-file=variables.tfvars --auto-approve
+
+      - name: Terraform Destroy
+        if: "contains(github.event.head_commit.message, 'Destroy')"
+        id: destroy
+        run: terraform destroy -var-file=variables.tfvars --auto-approve

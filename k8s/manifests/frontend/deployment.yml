@@ -1,0 +1,35 @@
+# This is a sample deployment manifest file for a simple web application.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatgpt-frontend-deployment
+  namespace: chatgpt
+  labels:
+    app: chatgpt-frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: chatgpt-frontend
+  template:
+    metadata:
+      labels:
+        app: chatgpt-frontend
+    spec:
+      containers:
+      - name: chatgpt-frontend
+        image: uj5ghare/chatgpt-frontend:"1.37.1"
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: Always
+        env:
+          - name: NEXT_PUBLIC_API_BASE_URL
+            value: "http://127.0.0.1:8000"
+      # imagePullSecrets:
+      # - name: <docker-secrets-name>  # pulling image from private registry with secrets
+      # cmd to create secrets = [ kubectl create secret docker-registry docker-secrets --docker-server=https://index.docker.io/v1/ --docker-username=ExamplaName --docker-password=ExamplePassword --docker-email=example@gmail.com ]

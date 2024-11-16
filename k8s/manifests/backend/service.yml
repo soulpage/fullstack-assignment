@@ -1,0 +1,16 @@
+# Service for the application
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatgpt-backend-svc
+  namespace: chatgpt
+  labels:
+    app: chatgpt-backend
+spec:
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: chatgpt-backend
+  type: ClusterIP

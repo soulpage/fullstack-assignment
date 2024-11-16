@@ -1,0 +1,29 @@
+# This is a sample deployment manifest file for a simple web application.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatgpt-backend-deployment
+  namespace: chatgpt
+  labels:
+    app: chatgpt-backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: chatgpt-backend
+  template:
+    metadata:
+      labels:
+        app: chatgpt-backend
+    spec:
+      containers:
+      - name: chatgpt-backend
+        image: uj5ghare/chatgpt-backend:"1.37.1"
+        ports:
+        - containerPort: 8000
+        imagePullPolicy: Always

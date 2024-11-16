@@ -1,0 +1,45 @@
+name: Docker Compose Deployment Workflow
+
+on:
+  push:
+    branches: [ujwal-cicd, ujwal-docker]
+    paths:
+      - ".github/workflows/docker.yml"
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    types: [synchronize]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  Docker-Compose-Deployment:
+    runs-on: self-hosted-runner
+    steps:
+
+    - name: Checkout Code 
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref_name }}
+
+    - name: Setup Env variables
+      run: | 
+        echo -e ${{ secrets.FRONTEND_ENV }} > frontend/.env.local
+        echo -e ${{ secrets.BACKEND_ENV }} > backend/.env
+        
+    - name: Destroy Previous Deployment
+      run: docker compose down
+
+    - name: Apply New Deployment
+      run: docker compose up -d
+
+    - name: Restart Nginx 
+      run: sudo systemctl restart nginx 

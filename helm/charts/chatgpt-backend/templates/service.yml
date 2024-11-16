@@ -1,0 +1,16 @@
+# Service for the application
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.defaultLabel }}-svc
+  namespace: {{ .Values.defaultNamespace }}
+  labels:
+    app: {{ .Values.defaultLabel }}
+spec:
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.targetPort}}
+    protocol: TCP
+  selector:
+    app: {{ .Values.defaultLabel }}
+  type: {{ .Values.service.type }}

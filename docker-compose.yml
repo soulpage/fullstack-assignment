@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+
+  frontend:
+    restart: always
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    image: uj5ghare/chatgpt-frontend:latest
+    container_name: frontend-con
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    volumes:
+      - frontend:/usr/bin/app
+    networks:
+      - two-tier
+    depends_on:
+      - backend
+
+  backend:
+    restart: always
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    image: uj5ghare/chatgpt-backend:latest
+    container_name: backend-con
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - backend:/usr/bin/app
+    networks:
+      - two-tier
+
+volumes:
+  frontend:
+    driver: local
+  backend:
+    driver: local
+
+networks:
+  two-tier:
+    driver: bridge
