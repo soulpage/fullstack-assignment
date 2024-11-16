@@ -8,7 +8,7 @@ defaultLabel: chatgpt-frontend
 image:
   repository: uj5ghare/chatgpt-frontend
   pullPolicy: Always
-  tag: "1.38.1"
+  tag: "1.39.1"
 
 service:
   type: ClusterIP
