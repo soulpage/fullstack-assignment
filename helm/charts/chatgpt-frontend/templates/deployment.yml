@@ -5,7 +5,7 @@ metadata:
   name: {{ .Values.defaultLabel }}-deployment
   namespace: {{ .Values.defaultNamespace }}
   labels:
-    app: {{ .Values.defaultLabels }}
+    app: {{ .Values.defaultLabel }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -15,14 +15,14 @@ spec:
       maxUnavailable: 25%
   selector:
     matchLabels:
-      app: {{ .Values.defaultLabels }}
+      app: {{ .Values.defaultLabel }}
   template:
     metadata:
       labels:
-        app: {{ .Values.defaultLabels }}
+        app: {{ .Values.defaultLabel }}
     spec:
       containers:
-      - name: {{ .Values.defaultLabels }}
+      - name: {{ .Values.defaultLabel }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         ports:
         - containerPort: {{ .Values.service.targetPort }}
