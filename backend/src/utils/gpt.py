@@ -63,12 +63,11 @@ def get_gpt_title(prompt: str, response: str):
 def get_conversation_answer(conversation: list[dict[str, str]], model: str, stream: bool = True):
     kwargs = {**GPT_40_PARAMS, **dict(stream=stream)}
     engine = GPT_VERSIONS[model].engine
-
     for resp in openai.ChatCompletion.create(
         engine=engine,
         messages=[{"role": "system", "content": "You are a helpful assistant."}, *conversation],
         **kwargs,
-    ):
+    ):  
         choices = resp.get("choices", [])
         if not choices:
             continue

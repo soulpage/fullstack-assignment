@@ -29,6 +29,7 @@ def get_answer(request):
 @api_view(["POST"])
 def get_conversation(request):
     data = request.data
+    print(data)
     return StreamingHttpResponse(
         get_conversation_answer(data["conversation"], data["model"], stream=True), content_type="text/html"
     )

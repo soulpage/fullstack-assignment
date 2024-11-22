@@ -59,6 +59,7 @@ def logout_view(request):
 
 
 @api_view(["POST"])
+
 def register_view(request):
     email = request.data.get("email")
     password = request.data.get("password")
