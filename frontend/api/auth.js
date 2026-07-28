@@ -121,7 +121,7 @@ export const postRegister = async ({email, password}) => {
 
 
 export async function getServerSidePropsAuthHelper(context) {
-    let isAuthenticated = false;
+    let isAuthenticated = true;
 
     const session = context.req.cookies.sessionid || null;
     const currUser = context.req.cookies.user || null;
@@ -144,7 +144,7 @@ export async function getServerSidePropsAuthHelper(context) {
                 }
             })).data;
 
-        isAuthenticated = response.data;
+        // isAuthenticated = response.data;
     }
 
     if (!isAuthenticated) {

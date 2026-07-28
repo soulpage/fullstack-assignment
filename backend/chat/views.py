@@ -1,11 +1,24 @@
+import hashlib
+
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from chat.models import Conversation, Message, Version
-from chat.serializers import ConversationSerializer, MessageSerializer, TitleSerializer, VersionSerializer
+from chat.models import Conversation, Message, UploadedFile, Version
+from chat.serializers import (
+    ConversationSerializer,
+    ConversationSummaryFilterSerializer,
+    ConversationSummarySerializer,
+    MessageSerializer,
+    TitleSerializer,
+    UploadedFileSerializer,
+    VersionSerializer,
+)
 from chat.utils.branching import make_branched_conversation
 
 
@@ -20,6 +33,96 @@ def get_conversations(request):
     conversations = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
     serializer = ConversationSerializer(conversations, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ConversationSummaryPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+@login_required
+@api_view(["GET"])
+def get_conversation_summaries(request):
+    """Return the current user's non-deleted conversation summaries."""
+    filters = ConversationSummaryFilterSerializer(data=request.query_params)
+    filters.is_valid(raise_exception=True)
+
+    conversations = Conversation.objects.filter(user=request.user, deleted_at__isnull=True).order_by("-modified_at")
+    data = filters.validated_data
+    if search := data.get("search"):
+        conversations = conversations.filter(Q(title__icontains=search) | Q(summary__icontains=search))
+    if title := data.get("title"):
+        conversations = conversations.filter(title__icontains=title)
+    if created_after := data.get("created_after"):
+        conversations = conversations.filter(created_at__gte=created_after)
+    if created_before := data.get("created_before"):
+        conversations = conversations.filter(created_at__lte=created_before)
+
+    paginator = ConversationSummaryPagination()
+    page = paginator.paginate_queryset(conversations, request)
+    serializer = ConversationSummarySerializer(page, many=True)
+    return paginator.get_paginated_response(serializer.data)
+
+
+def get_upload_sha256(upload):
+    digest = hashlib.sha256()
+    for chunk in upload.chunks():
+        digest.update(chunk)
+    upload.seek(0)
+    return digest.hexdigest()
+
+
+@login_required
+@api_view(["GET", "POST"])
+def uploaded_files(request):
+    if request.method == "GET":
+        files = UploadedFile.objects.filter(user=request.user)
+        return Response(UploadedFileSerializer(files, many=True, context={"request": request}).data)
+
+    upload = request.FILES.get("file")
+    if upload is None:
+        return Response({"file": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+    checksum = get_upload_sha256(upload)
+    if UploadedFile.objects.filter(user=request.user, sha256=checksum).exists():
+        return Response({"detail": "This file has already been uploaded."}, status=status.HTTP_409_CONFLICT)
+
+    uploaded_file = UploadedFile(
+        user=request.user,
+        file=upload,
+        original_name=upload.name,
+        content_type=upload.content_type or "",
+        size=upload.size,
+        sha256=checksum,
+    )
+    try:
+        with transaction.atomic():
+            uploaded_file.save()
+    except IntegrityError:
+        # The database constraint also covers simultaneous uploads of identical content.
+        # Saving a FileField happens before the database insert, so clean that blob up.
+        uploaded_file.file.delete(save=False)
+        return Response({"detail": "This file has already been uploaded."}, status=status.HTTP_409_CONFLICT)
+
+    return Response(
+        UploadedFileSerializer(uploaded_file, context={"request": request}).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@login_required
+@api_view(["DELETE"])
+def delete_uploaded_file(request, pk):
+    try:
+        uploaded_file = UploadedFile.objects.get(pk=pk, user=request.user)
+    except UploadedFile.DoesNotExist:
+        return Response({"detail": "Uploaded file not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # FileField does not remove the stored object when its model row is deleted.
+    uploaded_file.file.delete(save=False)
+    uploaded_file.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @login_required
@@ -70,6 +173,7 @@ def add_conversation(request):
 
         conversation.active_version = version
         conversation.save()
+        conversation.refresh_summary()
 
         serializer = ConversationSerializer(conversation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -147,6 +251,7 @@ def conversation_add_message(request, pk):
     serializer = MessageSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(version=version)
+        conversation.refresh_summary()
         # return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(
             {
@@ -189,6 +294,7 @@ def conversation_add_version(request, pk):
     # Set the new version as the current version
     conversation.active_version = new_version
     conversation.save()
+    conversation.refresh_summary()
 
     serializer = VersionSerializer(new_version)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -207,6 +313,7 @@ def conversation_switch_version(request, pk, version_id):
 
     conversation.active_version = version
     conversation.save()
+    conversation.refresh_summary()
 
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -222,6 +329,7 @@ def version_add_message(request, pk):
     serializer = MessageSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(version=version)
+        version.conversation.refresh_summary()
         return Response(
             {
                 "message": serializer.data,
