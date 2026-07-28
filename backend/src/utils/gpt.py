@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 
 from src.libs import openai
 
@@ -58,6 +59,33 @@ def get_gpt_title(prompt: str, response: str):
 
     result = response["choices"][0]["message"]["content"].replace('"', "")
     return result
+
+
+def get_gpt_summary(conversation: list[dict[str, str]]) -> str:
+    """Return a concise summary of a chat transcript.
+
+    A local fallback keeps message persistence working when the configured GPT
+    provider is temporarily unavailable during development.
+    """
+    transcript = "\n".join(f"{message['role'].title()}: {message['content']}" for message in conversation)
+    sys_msg = (
+        "Summarize this conversation in two or three concise sentences. Preserve "
+        "important questions, decisions, and follow-up actions. Return only the summary."
+    )
+
+    if not os.getenv("OPENAI_API_KEY") or not os.getenv("OPENAI_API_BASE"):
+        return " ".join(message["content"].strip() for message in conversation if message["content"].strip())[:500]
+
+    try:
+        response = openai.ChatCompletion.create(
+            engine=GPT_VERSIONS["gpt35"].engine,
+            messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": transcript}],
+            **GPT_40_PARAMS,
+        )
+        return response["choices"][0]["message"]["content"].strip()
+    except Exception:
+        # Keep a useful, bounded summary even if an API key/endpoint is absent.
+        return " ".join(message["content"].strip() for message in conversation if message["content"].strip())[:500]
 
 
 def get_conversation_answer(conversation: list[dict[str, str]], model: str, stream: bool = True):

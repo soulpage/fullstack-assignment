@@ -15,6 +15,7 @@ class Role(models.Model):
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100, blank=False, null=False, default="Mock title")
+    summary = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     active_version = models.ForeignKey(
@@ -30,6 +31,51 @@ class Conversation(models.Model):
         return self.versions.count()
 
     version_count.short_description = "Number of versions"
+
+    def refresh_summary(self):
+        """Generate and persist a summary for the active version of this conversation."""
+        if self.active_version_id is None:
+            self.summary = ""
+            self.save(update_fields=["summary", "modified_at"])
+            return self.summary
+
+        messages = list(self.active_version.messages.select_related("role").all())
+        if not messages:
+            self.summary = ""
+            self.save(update_fields=["summary", "modified_at"])
+            return self.summary
+
+        from src.utils.gpt import get_gpt_summary
+
+        conversation = [{"role": message.role.name, "content": message.content} for message in messages]
+        self.summary = get_gpt_summary(conversation)
+        self.save(update_fields=["summary", "modified_at"])
+        return self.summary
+
+
+def uploaded_file_path(instance, filename):
+    """Keep uploads grouped by owner while letting storage choose a safe name."""
+    return f"uploads/{instance.user_id}/{filename}"
+
+
+class UploadedFile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="uploaded_files")
+    file = models.FileField(upload_to=uploaded_file_path)
+    original_name = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=255, blank=True)
+    size = models.PositiveBigIntegerField()
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "sha256"], name="unique_uploaded_file_hash_per_user"),
+        ]
+
+    def __str__(self):
+        return self.original_name
 
 
 class Version(models.Model):

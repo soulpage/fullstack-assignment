@@ -5,6 +5,7 @@ from chat import views
 urlpatterns = [
     path("", views.chat_root_view, name="chat_root_view"),
     path("conversations/", views.get_conversations, name="get_conversations"),
+    path("conversation-summaries/", views.get_conversation_summaries, name="get_conversation_summaries"),
     path("conversations_branched/", views.get_conversations_branched, name="get_branched_conversations"),
     path("conversation_branched/<uuid:pk>/", views.get_conversation_branched, name="get_branched_conversation"),
     path("conversations/add/", views.add_conversation, name="add_conversation"),
@@ -19,4 +20,6 @@ urlpatterns = [
     ),
     path("conversations/<uuid:pk>/delete/", views.conversation_soft_delete, name="conversation_delete"),
     path("versions/<uuid:pk>/add_message/", views.version_add_message, name="version_add_message"),
+    path("files/", views.uploaded_files, name="uploaded_files"),
+    path("files/<uuid:pk>/", views.delete_uploaded_file, name="delete_uploaded_file"),
 ]
